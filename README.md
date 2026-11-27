@@ -176,19 +176,19 @@ Para usar toda a rede de **22 agentes, 20 skills, regras P0, hooks e 3 MCPs** em
 
 ```powershell
 # 1) Pull + montagem do Plugin Global em ~/.gemini/config/plugins/analytics-agent/ + warmup read-only
-uvx --from git+https://github.com/<org>/AnalyticsAgent analytics-agent-warmup install --repo-url https://github.com/<org>/AnalyticsAgent.git
+uvx --python 3.12 --from git+https://github.com/Angelicogfa/AnalyticsAgent analytics-agent-warmup install
 
 # (Ou a partir de um clone local deste repositório:)
 uv run scripts/warmup.py install
 
 # 2) Opcional: preparar apenas as pastas de trabalho num projeto externo (SEM copiar .agents/)
-uvx --from git+https://github.com/<org>/AnalyticsAgent analytics-agent-warmup init-workspace --workspace .
+uvx --python 3.12 --from git+https://github.com/Angelicogfa/AnalyticsAgent analytics-agent-warmup init-workspace --workspace .
 
 # 3) Checar status do plugin instalado
-uv run scripts/warmup.py status
+uvx --python 3.12 --from git+https://github.com/Angelicogfa/AnalyticsAgent analytics-agent-warmup status
 ```
 
-> **Atualização contínua:** rode o comando `install --repo-url ...` novamente para fazer `git pull` e atualizar o plugin global em todas as suas sessões do Antigravity. Os hooks respeitam automaticamente `ops/governance/policy.json` local do projeto (se existir) com fallback para a política empacotada no plugin (`PLUGIN_ROOT`), e gravam telemetria em `PLUGIN_DATA` sem poluir projetos externos.
+> **Atualização contínua:** rode o comando `install` novamente para fazer `git pull` e atualizar o plugin global em todas as suas sessões do Antigravity. Os hooks respeitam automaticamente `ops/governance/policy.json` local do projeto (se existir) com fallback para a política empacotada no plugin (`PLUGIN_ROOT`), e gravam telemetria em `PLUGIN_DATA` sem poluir projetos externos.
 
 ### Modo B — Repositório Template (MIT) para Novo Produto de Dados
 Clique em **Use this template** no GitHub para iniciar um repositório completo com `src/data_products/`, `contracts/`, `specs/`, `knowledge/`, `tests/` e CI verde.

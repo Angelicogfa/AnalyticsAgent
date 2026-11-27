@@ -28,6 +28,11 @@ dependencies = []
 [project.scripts]
 analytics-agent-warmup = "data_products.harness.warmup:main"
 
+[project.urls]
+Homepage = "https://github.com/Angelicogfa/AnalyticsAgent"
+Repository = "https://github.com/Angelicogfa/AnalyticsAgent"
+Issues = "https://github.com/Angelicogfa/AnalyticsAgent/issues"
+
 [project.optional-dependencies]
 fabric = [
   "azure-identity>=1.17.0",

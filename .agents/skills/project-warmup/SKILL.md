@@ -14,7 +14,7 @@ Quando o harness `analytics-agent` estiver instalado como **Plugin Global** (`~/
 ## Fluxo em 3 Passos
 1. **Preparar a estrutura leve de trabalho (sem copiar `.agents/`):**
    ```powershell
-   uvx --from git+https://github.com/<org>/AnalyticsAgent analytics-agent-warmup init-workspace --workspace .
+   uvx --python 3.12 --from git+https://github.com/Angelicogfa/AnalyticsAgent analytics-agent-warmup init-workspace --workspace .
    ```
    *(Ou, se executado localmente a partir do plugin/clone: `python scripts/warmup.py init-workspace --workspace .`)*
 2. **Validar ambiente MCP, Python 3.11/3.12 e TLS (`RULE-05`):**
@@ -25,5 +25,5 @@ Quando o harness `analytics-agent` estiver instalado como **Plugin Global** (`~/
 ## Atualização Contínua do Plugin Global (Pull em 1 Comando)
 Sempre que houver novas skills, regras ou agentes no repositório central `AnalyticsAgent`, atualize globalmente sem tocar nos seus projetos:
 ```powershell
-uvx --from git+https://github.com/<org>/AnalyticsAgent analytics-agent-warmup install --repo-url https://github.com/<org>/AnalyticsAgent.git
+uvx --python 3.12 --from git+https://github.com/Angelicogfa/AnalyticsAgent analytics-agent-warmup install
 ```

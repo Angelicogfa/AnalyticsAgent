@@ -2,7 +2,7 @@
 """CLI Dual-Mode do AnalyticsAgent: instala/atualiza o Plugin Global no Antigravity e faz warmup sem copiar o repo.
 
 Uso em instância crua do Antigravity (1 comando):
-  uvx --from git+https://github.com/<org>/AnalyticsAgent analytics-agent-warmup install --repo-url https://github.com/<org>/AnalyticsAgent.git
+  uvx --python 3.12 --from git+https://github.com/Angelicogfa/AnalyticsAgent analytics-agent-warmup install
 
 Uso local (dentro de um clone):
   uv run scripts/warmup.py install
@@ -23,6 +23,8 @@ from pathlib import Path
 
 PLUGIN_NAME = "analytics-agent"
 PLUGIN_VERSION = "0.2.0"
+REPO_HOMEPAGE = "https://github.com/Angelicogfa/AnalyticsAgent"
+DEFAULT_REPO_URL = "https://github.com/Angelicogfa/AnalyticsAgent.git"
 MAX_RULE_FILE_BYTES = 24_000
 
 
@@ -105,6 +107,8 @@ def assemble_plugin(source_root: Path, target_dir: Path, include_mcp: bool = Tru
             "regras P0/FinOps, hooks determinísticos e MCPs para Microsoft Fabric, AWS e Power BI PBIP."
         ),
         "version": PLUGIN_VERSION,
+        "homepage": REPO_HOMEPAGE,
+        "repository": REPO_HOMEPAGE,
         "suggestedPrompts": [
             "Faça o warmup deste projeto com project-warmup e crie nossa primeira SPEC de dados",
             "Valide o ambiente MCP (Fabric, AWS, Power BI), Python 3.12 e TLS em modo read-only",
@@ -213,13 +217,11 @@ def cmd_install(args: argparse.Namespace) -> int:
         source_root = Path(args.source_dir).resolve()
     else:
         detected = detect_local_repo_root()
-        if not detected:
-            print(
-                "Erro: não estou dentro de um clone do AnalyticsAgent. Informe --repo-url <git-url> ou --source-dir <dir>.",
-                file=sys.stderr,
-            )
-            return 1
-        source_root = detected
+        if detected:
+            source_root = detected
+        else:
+            # Executado via uvx fora de um clone local: faz pull automático do repositório oficial
+            source_root = sync_git_repo(DEFAULT_REPO_URL, Path(args.cache_dir), branch=args.branch or None)
 
     target_dir = Path(args.target_dir).expanduser().resolve()
     bundle_info = assemble_plugin(source_root, target_dir, include_mcp=not args.no_mcp)
