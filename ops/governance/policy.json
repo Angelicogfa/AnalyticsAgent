@@ -1,7 +1,7 @@
 {
-  "version": "1.3.0",
+  "version": "1.4.0",
   "owner": "governance-auditor",
-  "description": "Política declarativa determinística v1.3.0: inclui maxAgentHierarchyDepth=2 e subagentRouting para os 12 sub-operadores folha (DS, DE, BI, MLOps) sob seus 4 Domain Managers.",
+  "description": "Política declarativa determinística v1.4.0: maxAgentHierarchyDepth=2, subagentRouting dos 12 sub-operadores folha, regex FinOps multilinha (I1), detecção de tokens GitHub/JWT/Azure client secret (M1) e correção de falso positivo em git push -f (M2).",
   "security": {
     "blockedCommandPatterns": [
       {
@@ -48,7 +48,7 @@
       },
       {
         "id": "SEC-GIT-FORCE-PUSH",
-        "pattern": "(?i)\\bgit\\s+push\\b.*(--force|-f)\\b",
+        "pattern": "(?i)\\bgit\\s+push\\b.*\\s(--force(-with-lease)?|-f)(?=\\s|=|$)",
         "severity": "HIGH",
         "decision": "deny",
         "reason": "git push --force proibido para preservar trilha de auditoria e linhagem."
@@ -86,8 +86,23 @@
       },
       {
         "id": "SEC-GENERIC-TOKEN",
-        "pattern": "(?i)(api_key|secret_key|access_token|password)\\s*[:=]\\s*[\"'][A-Za-z0-9_\\-\\.]{16,}[\"']",
-        "reason": "Possível credencial hardcoded detectada."
+        "pattern": "(?i)\\b(api_?key|secret_key|access_token|password|passwd)\\b[\"']?\\s*[:=]\\s*[\"']?(?![A-Za-z0-9_\\-\\.~+/]*\\()[A-Za-z0-9_\\-\\.~+/]{16,}",
+        "reason": "Possível credencial hardcoded detectada (com ou sem aspas)."
+      },
+      {
+        "id": "SEC-GITHUB-TOKEN",
+        "pattern": "\\b(gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})\\b",
+        "reason": "Possível token do GitHub (PAT/OAuth/App) detectado."
+      },
+      {
+        "id": "SEC-JWT",
+        "pattern": "\\beyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}",
+        "reason": "Possível JWT (bearer token) detectado."
+      },
+      {
+        "id": "SEC-AZURE-CLIENT-SECRET",
+        "pattern": "(?i)\\b(client_?secret|AZURE_CLIENT_SECRET)\\b[\"']?\\s*[:=]\\s*[\"']?(?![A-Za-z0-9_\\-\\.~]*\\()[A-Za-z0-9_\\-\\.~]{30,}",
+        "reason": "Possível segredo de cliente Azure / Entra ID detectado."
       }
     ],
     "piiFieldKeywords": [
@@ -200,7 +215,7 @@
     "costWarningCommandPatterns": [
       {
         "id": "FINOPS-SELECT-STAR-NO-LIMIT",
-        "pattern": "(?i)SELECT\\s+\\*\\s+FROM\\s+(?!.*\\b(LIMIT|TOP|WHERE)\\b)",
+        "pattern": "(?is)SELECT\\s+\\*\\s+FROM\\s+(?!.*\\b(LIMIT|TOP|WHERE)\\b)",
         "decision": "force_ask",
         "reason": "Query 'SELECT *' sem cláusula WHERE/LIMIT pode gerar full-table scan caro no Athena/Fabric. Confirme ou adicione filtro de partição e LIMIT."
       }

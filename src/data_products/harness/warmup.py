@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""CLI Dual-Mode do AnalyticsAgent: instala/atualiza o Plugin Global no Antigravity e faz warmup sem copiar o repo.
+"""CLI Dual-Mode do AnalyticsAgent: instala/atualiza o Plugin Global e faz warmup sem copiar o repo.
 
-Uso em instância crua do Antigravity (1 comando):
+Uso em instância crua (1 comando):
   uvx --python 3.12 --from git+https://github.com/Angelicogfa/AnalyticsAgent analytics-agent-warmup install
 
 Uso local (dentro de um clone):
@@ -26,6 +26,34 @@ PLUGIN_VERSION = "0.2.0"
 REPO_HOMEPAGE = "https://github.com/Angelicogfa/AnalyticsAgent"
 DEFAULT_REPO_URL = "https://github.com/Angelicogfa/AnalyticsAgent.git"
 MAX_RULE_FILE_BYTES = 24_000
+
+
+def _rewrite_plugin_skill_paths(skills_dir: Path, replacement_prefix: str) -> None:
+    """Reescreve referências `.agents/skills/` nos SKILL.md do bundle para a raiz do plugin."""
+    for skill_md in skills_dir.rglob("*.md"):
+        text = skill_md.read_text(encoding="utf-8")
+        if ".agents/skills/" in text:
+            skill_md.write_text(text.replace(".agents/skills/", replacement_prefix), encoding="utf-8")
+
+
+def _safe_reset_antigravity_plugin_dir(target_dir: Path) -> None:
+    """Só remove o destino se estiver vazio ou já for bundle deste plugin (não apaga diretórios alheios)."""
+    if not target_dir.exists():
+        return
+    manifest = target_dir / "plugin.json"
+    if manifest.exists():
+        try:
+            data = json.loads(manifest.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            data = {}
+        if data.get("name") == PLUGIN_NAME:
+            shutil.rmtree(target_dir)
+            return
+    if any(target_dir.iterdir()):
+        raise RuntimeError(
+            f"Destino {target_dir} não está vazio e não é um bundle '{PLUGIN_NAME}'. "
+            "Escolha outro --target-dir."
+        )
 
 
 def default_plugin_dir() -> Path:
@@ -82,8 +110,9 @@ def build_consolidated_rules(source_root: Path) -> str:
     size_bytes = len(combined.encode("utf-8"))
     if size_bytes >= MAX_RULE_FILE_BYTES:
         raise ValueError(
-            f"rules/AGENTS.md consolidado excedeu o limite do Antigravity "
-            f"({size_bytes} bytes >= {MAX_RULE_FILE_BYTES} bytes). Pode regras redundantes antes de empacotar."
+            "rules/AGENTS.md consolidado excedeu o limite do Antigravity "
+            f"({size_bytes} bytes >= {MAX_RULE_FILE_BYTES} bytes). "
+            "Pode regras redundantes antes de empacotar."
         )
     return combined
 
@@ -94,8 +123,7 @@ def assemble_plugin(source_root: Path, target_dir: Path, include_mcp: bool = Tru
     if not agents_src.exists():
         raise FileNotFoundError(f"Diretório .agents não encontrado na origem: {source_root}")
 
-    if target_dir.exists():
-        shutil.rmtree(target_dir)
+    _safe_reset_antigravity_plugin_dir(target_dir)
     target_dir.mkdir(parents=True, exist_ok=True)
 
     # 1. Manifesto oficial plugin.json (apenas campos reconhecidos pelo loader do Antigravity)
@@ -122,7 +150,9 @@ def assemble_plugin(source_root: Path, target_dir: Path, include_mcp: bool = Tru
         shutil.copy2(logo_src, target_dir / "assets" / "logo.svg")
         manifest["logo"] = "assets/logo.svg"
 
-    (target_dir / "plugin.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (target_dir / "plugin.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
 
     # 2. Rules consolidadas (< 24 KB garantido)
     rules_dir = target_dir / "rules"
@@ -138,9 +168,11 @@ def assemble_plugin(source_root: Path, target_dir: Path, include_mcp: bool = Tru
         shutil.copy2(agent_md, agents_dst / agent_md.name)
         agent_count += 1
 
-    # 4. Skills
+    # 4. Skills (com caminhos reescritos para funcionar em workspaces externos)
     skills_dst = target_dir / "skills"
-    shutil.copytree(agents_src / "skills", skills_dst)
+    no_cache = shutil.ignore_patterns("__pycache__", "*.pyc")
+    shutil.copytree(agents_src / "skills", skills_dst, ignore=no_cache)
+    _rewrite_plugin_skill_paths(skills_dst, "${PLUGIN_ROOT}/skills/")
     skill_count = sum(1 for p in skills_dst.iterdir() if p.is_dir())
 
     # 5. Hooks + política padrão empacotada (fallback para PLUGIN_ROOT)
@@ -179,17 +211,157 @@ def assemble_plugin(source_root: Path, target_dir: Path, include_mcp: bool = Tru
     }
 
 
+def default_claude_plugin_dir() -> Path:
+    return Path.home() / ".analytics-agent" / "claude-code-plugin"
+
+
+def _safe_reset_claude_plugin_dir(target_dir: Path) -> None:
+    """Só remove o destino se estiver vazio ou já for bundle deste plugin (não apaga diretórios alheios)."""
+    if not target_dir.exists():
+        return
+    manifest = target_dir / ".claude-plugin" / "plugin.json"
+    if manifest.exists() and json.loads(manifest.read_text(encoding="utf-8")).get("name") == PLUGIN_NAME:
+        shutil.rmtree(target_dir)
+        return
+    if any(target_dir.iterdir()):
+        raise RuntimeError(
+            f"Destino {target_dir} não está vazio e não é um bundle '{PLUGIN_NAME}'. "
+            "Escolha outro --claude-target-dir."
+        )
+
+
+def assemble_claude_plugin(source_root: Path, target_dir: Path, include_mcp: bool = True) -> dict:
+    """Monta o bundle de plugin do Claude Code a partir da mesma fonte única (.agents/)."""
+    from data_products.harness import claude_sync
+
+    agents_src = source_root / ".agents"
+    if not agents_src.exists():
+        raise FileNotFoundError(f"Diretório .agents não encontrado na origem: {source_root}")
+    _safe_reset_claude_plugin_dir(target_dir)
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    (target_dir / ".claude-plugin").mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "name": PLUGIN_NAME,
+        "description": (
+            "Rede cooperativa de 22 agentes, 20 skills, regras P0/FinOps, hooks determinísticos e MCPs "
+            "para Microsoft Fabric, AWS e Power BI PBIP (mesma fonte do plugin Antigravity)."
+        ),
+        "author": {"name": "AnalyticsAgent Contributors"},
+        "homepage": REPO_HOMEPAGE,
+        "repository": REPO_HOMEPAGE,
+    }
+    # Sem "version": em marketplace git o Claude Code usa o SHA do commit (atualiza a cada push).
+    (target_dir / ".claude-plugin" / "plugin.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+    generated = claude_sync.build(source_root)
+
+    # Agentes (frontmatter traduzido), achatados em 1 nível
+    (target_dir / "agents").mkdir(parents=True, exist_ok=True)
+    agent_count = 0
+    for rel, content in generated.files.items():
+        if rel.parts[:2] == (".claude", "agents"):
+            (target_dir / "agents" / rel.name).write_text(content, encoding="utf-8")
+            agent_count += 1
+
+    # Skills completas (SKILL.md + scripts/references) com caminhos reescritos para o plugin Claude
+    no_cache = shutil.ignore_patterns("__pycache__", "*.pyc")
+    shutil.copytree(agents_src / "skills", target_dir / "skills", ignore=no_cache)
+    _rewrite_plugin_skill_paths(target_dir / "skills", "${CLAUDE_PLUGIN_ROOT}/skills/")
+    skill_count = sum(1 for p in (target_dir / "skills").iterdir() if p.is_dir())
+
+    # Workflows (C2): runner do ciclo governado + orquestrador + configs dentro do plugin Claude
+    wf_dst = target_dir / "workflows"
+    wf_dst.mkdir(parents=True, exist_ok=True)
+    for wf_src in (
+        source_root / ".claude" / "workflows" / "run_spec_cycle.py",
+        source_root / ".claude" / "workflows" / "claude_runtime.json",
+        source_root / ".claude" / "model_map.json",
+        agents_src / "workflows" / "data_task_orchestrator.py",
+    ):
+        if wf_src.exists():
+            shutil.copy2(wf_src, wf_dst / wf_src.name)
+
+    # Hooks originais + adaptadores Claude + política empacotada
+    shutil.copytree(agents_src / "hooks", target_dir / "hooks", ignore=no_cache)
+    shutil.copytree(source_root / ".claude" / "hooks", target_dir / "claude_hooks", ignore=no_cache)
+    policy_src = source_root / "ops" / "governance" / "policy.json"
+    if policy_src.exists():
+        (target_dir / "ops" / "governance").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(policy_src, target_dir / "ops" / "governance" / "policy.json")
+
+    def hook(script: str, **extra: object) -> dict:
+        entry: dict[str, object] = {
+            "type": "command",
+            "command": f'python "${{CLAUDE_PLUGIN_ROOT}}/claude_hooks/{script}"',
+            "timeout": 10,
+        }
+        entry.update(extra)
+        return entry
+
+    hooks_json = {
+        "hooks": {
+            "SessionStart": [{"hooks": [hook("claude_bootstrap.py")]}],
+            "PreToolUse": [
+                {
+                    "matcher": "Bash|PowerShell|Write|Edit|NotebookEdit|mcp__.*",
+                    "hooks": [hook("claude_gate.py", onFailure="block")],
+                }
+            ],
+            "PostToolUse": [{"matcher": "*", "hooks": [hook("claude_telemetry.py")]}],
+            "Stop": [{"hooks": [hook("claude_stop.py")]}],
+        }
+    }
+    (target_dir / "hooks" / "hooks.json").write_text(
+        json.dumps(hooks_json, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+    # Templates para init-workspace (regras P0 não são carregadas por plugins do Claude Code; ver README)
+    for tpl_rel in ("specs/templates", "contracts/templates", "knowledge/templates"):
+        src_tpl = source_root / tpl_rel
+        if src_tpl.exists():
+            shutil.copytree(src_tpl, target_dir / "templates" / tpl_rel.split("/")[0], ignore=no_cache)
+
+    mcp_servers: list[str] = []
+    mcp_rel = Path(".mcp.json")
+    if include_mcp and mcp_rel in generated.files:
+        (target_dir / ".mcp.json").write_text(generated.files[mcp_rel], encoding="utf-8")
+        mcp_servers = sorted(json.loads(generated.files[mcp_rel]).get("mcpServers", {}).keys())
+
+    return {
+        "pluginDir": str(target_dir),
+        "version": PLUGIN_VERSION,
+        "agentsBundled": agent_count,
+        "skillsBundled": skill_count,
+        "mcpServers": mcp_servers,
+        "hooksEnabled": True,
+        "usage": f'claude --plugin-dir "{target_dir}"',
+    }
+
+
 def run_warmup_checks(source_root: Path | None) -> dict:
     v = sys.version_info
     tls_ok = (
         os.environ.get("NODE_TLS_REJECT_UNAUTHORIZED") != "0"
         and not os.environ.get("AZURE_CLI_DISABLE_CONNECTION_VERIFICATION")
     )
-    binaries = {name: bool(shutil.which(name)) for name in ("git", "node", "npx", "uv", "uvx", "az", "aws")}
+    binaries = {
+        name: bool(shutil.which(name))
+        for name in ("git", "node", "npx", "uv", "uvx", "az", "aws")
+    }
 
     kb_indexed = False
     if source_root and (source_root / "knowledge").exists():
-        kb_cli = source_root / ".agents" / "skills" / "internal-knowledge-base" / "scripts" / "knowledge_cli.py"
+        kb_cli = (
+            source_root
+            / ".agents"
+            / "skills"
+            / "internal-knowledge-base"
+            / "scripts"
+            / "knowledge_cli.py"
+        )
         if kb_cli.exists():
             tmp_out = source_root / "ops" / "telemetry" / "warmup_kb_index.json"
             proc = subprocess.run(
@@ -211,8 +383,10 @@ def run_warmup_checks(source_root: Path | None) -> dict:
 
 
 def cmd_install(args: argparse.Namespace) -> int:
-    if args.repo_url:
-        source_root = sync_git_repo(args.repo_url, Path(args.cache_dir), branch=args.branch or None)
+    repo_url = args.repo_url or os.environ.get("ANALYTICS_AGENT_REPO_URL", "").strip()
+    branch = args.branch or os.environ.get("ANALYTICS_AGENT_REPO_REF", "").strip() or None
+    if repo_url:
+        source_root = sync_git_repo(repo_url, Path(args.cache_dir), branch=branch)
     elif args.source_dir:
         source_root = Path(args.source_dir).resolve()
     else:
@@ -220,15 +394,28 @@ def cmd_install(args: argparse.Namespace) -> int:
         if detected:
             source_root = detected
         else:
-            # Executado via uvx fora de um clone local: faz pull automático do repositório oficial
-            source_root = sync_git_repo(DEFAULT_REPO_URL, Path(args.cache_dir), branch=args.branch or None)
+            # Executado via uvx fora de clone local: faz pull do repositório configurado
+            source_root = sync_git_repo(DEFAULT_REPO_URL, Path(args.cache_dir), branch=branch)
+
+    target = getattr(args, "target", "antigravity")
+    if target in ("claude-code", "all"):
+        claude_dir = Path(args.claude_target_dir).expanduser().resolve()
+        claude_info = assemble_claude_plugin(source_root, claude_dir, include_mcp=not args.no_mcp)
+        print(
+            f"Plugin Claude Code '{PLUGIN_NAME}' montado em: {claude_dir}\n"
+            f"  Agentes: {claude_info['agentsBundled']} | Skills: {claude_info['skillsBundled']} | "
+            f"MCPs: {', '.join(claude_info['mcpServers']) or 'none'}\n"
+            f"  Uso: {claude_info['usage']}"
+        )
+        if target == "claude-code":
+            return 0
 
     target_dir = Path(args.target_dir).expanduser().resolve()
     bundle_info = assemble_plugin(source_root, target_dir, include_mcp=not args.no_mcp)
     warmup_info = run_warmup_checks(source_root)
 
     report = {
-        "generatedAtUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "generatedAtUtc": dt.datetime.now(dt.UTC).isoformat(),
         "mode": "global-plugin",
         "sourceRoot": str(source_root),
         "bundle": bundle_info,
@@ -242,8 +429,10 @@ def cmd_install(args: argparse.Namespace) -> int:
     print(
         f"Plugin '{PLUGIN_NAME}' instalado/atualizado em: {target_dir}\n"
         f"  Agentes: {bundle_info['agentsBundled']} | Skills: {bundle_info['skillsBundled']} | "
-        f"Rules: {bundle_info['rulesBytes']} bytes | MCPs: {', '.join(bundle_info['mcpServers']) or 'none'}\n"
-        f"  Warmup: Python {warmup_info['pythonVersion']} (RULE-05 ok={warmup_info['pythonRule05Compatible']}), "
+        f"Rules: {bundle_info['rulesBytes']} bytes | "
+        f"MCPs: {', '.join(bundle_info['mcpServers']) or 'none'}\n"
+        f"  Warmup: Python {warmup_info['pythonVersion']} "
+        f"(RULE-05 ok={warmup_info['pythonRule05Compatible']}), "
         f"TLS ok={warmup_info['tlsCompliant']}\n"
         f"  Relatório: {out_path}"
     )
@@ -251,7 +440,7 @@ def cmd_install(args: argparse.Namespace) -> int:
 
 
 def cmd_init_workspace(args: argparse.Namespace) -> int:
-    """Inicializa apenas as pastas de trabalho de Produtos de Dados num workspace externo (sem copiar .agents/)."""
+    """Inicializa apenas as pastas de trabalho num workspace externo (sem copiar .agents/)."""
     ws = Path(args.workspace).expanduser().resolve()
     ws.mkdir(parents=True, exist_ok=True)
 
@@ -292,7 +481,7 @@ def cmd_init_workspace(args: argparse.Namespace) -> int:
         if not init_file.exists():
             init_file.write_text('"""Data products package."""\n', encoding="utf-8")
 
-    # Copia templates (specs, contracts, knowledge) a partir do plugin instalado ou repo local, sem copiar .agents/
+    # Copia templates (specs, contracts, knowledge) a partir do plugin ou repo local, sem .agents/
     template_sources = []
     plugin_dir = Path(args.plugin_dir).expanduser().resolve()
     if (plugin_dir / "templates").exists():
@@ -334,10 +523,18 @@ def cmd_status(args: argparse.Namespace) -> int:
 
     manifest = json.loads((target_dir / "plugin.json").read_text(encoding="utf-8"))
     agents = list((target_dir / "agents").glob("*.md")) if (target_dir / "agents").exists() else []
-    skills = [p.name for p in (target_dir / "skills").iterdir() if p.is_dir()] if (target_dir / "skills").exists() else []
+    skills = (
+        [p.name for p in (target_dir / "skills").iterdir() if p.is_dir()]
+        if (target_dir / "skills").exists()
+        else []
+    )
     rules_file = target_dir / "rules" / "AGENTS.md"
     mcp_file = target_dir / "mcp_config.json"
-    mcps = sorted(json.loads(mcp_file.read_text(encoding="utf-8")).get("mcpServers", {}).keys()) if mcp_file.exists() else []
+    mcps = (
+        sorted(json.loads(mcp_file.read_text(encoding="utf-8")).get("mcpServers", {}).keys())
+        if mcp_file.exists()
+        else []
+    )
 
     info = {
         "installed": True,
@@ -357,31 +554,67 @@ def cmd_status(args: argparse.Namespace) -> int:
 def main() -> int:
     parser = argparse.ArgumentParser(
         prog="analytics-agent-warmup",
-        description="Instalador/Atualizador do Plugin Global AnalyticsAgent e Warmup de Workspaces no Antigravity.",
+        description=(
+            "Instalador/Atualizador do Plugin Global AnalyticsAgent e Warmup de Workspaces no Antigravity."
+        ),
     )
     sub = parser.add_subparsers(dest="command", required=True)
 
-    p_inst = sub.add_parser("install", help="Faz pull/montagem do Plugin Global em ~/.gemini/config/plugins/analytics-agent")
-    p_inst.add_argument("--repo-url", default="", help="URL Git do repositório AnalyticsAgent para pull automático")
+    p_inst = sub.add_parser(
+        "install",
+        help="Faz pull/montagem do Plugin Global em ~/.gemini/config/plugins/analytics-agent",
+    )
+    p_inst.add_argument("--repo-url", default="", help="URL Git do repositório para pull automático")
     p_inst.add_argument("--branch", default="", help="Branch opcional para checkout/pull")
-    p_inst.add_argument("--source-dir", default="", help="Diretório local de origem (padrão: detecta clone atual)")
-    p_inst.add_argument("--cache-dir", default=str(default_source_cache_dir()), help="Cache local do clone Git")
-    p_inst.add_argument("--target-dir", default=str(default_plugin_dir()), help="Diretório destino do plugin Antigravity")
+    p_inst.add_argument("--source-dir", default="", help="Diretório local de origem")
+    p_inst.add_argument("--cache-dir", default=str(default_source_cache_dir()), help="Cache do clone Git")
+    p_inst.add_argument(
+        "--target-dir", default=str(default_plugin_dir()), help="Destino do plugin Antigravity"
+    )
     p_inst.add_argument("--no-mcp", action="store_true", help="Instala o plugin sem mcp_config.json")
     p_inst.add_argument("--output", default="", help="Caminho opcional do relatório JSON de warmup")
+    p_inst.add_argument(
+        "--target",
+        choices=["antigravity", "claude-code", "all"],
+        default="antigravity",
+        help="Harness de destino (padrão: antigravity, comportamento original)",
+    )
+    p_inst.add_argument(
+        "--claude-target-dir",
+        default=str(default_claude_plugin_dir()),
+        help="Destino do bundle de plugin Claude Code (uso: claude --plugin-dir <dir>)",
+    )
     p_inst.set_defaults(func=cmd_install)
 
-    p_ws = sub.add_parser("init-workspace", help="Prepara pastas de trabalho num projeto externo sem copiar .agents/")
+    p_ws = sub.add_parser(
+        "init-workspace",
+        help="Prepara pastas de trabalho num projeto externo sem copiar .agents/",
+    )
     p_ws.add_argument("--workspace", default=".", help="Diretório do workspace a preparar")
-    p_ws.add_argument("--plugin-dir", default=str(default_plugin_dir()), help="Diretório do plugin instalado")
+    p_ws.add_argument("--plugin-dir", default=str(default_plugin_dir()), help="Diretório do plugin")
     p_ws.set_defaults(func=cmd_init_workspace)
 
     p_st = sub.add_parser("status", help="Exibe status da instalação do Plugin Global")
-    p_st.add_argument("--target-dir", default=str(default_plugin_dir()), help="Diretório do plugin Antigravity")
+    p_st.add_argument("--target-dir", default=str(default_plugin_dir()), help="Destino do plugin Antigravity")
     p_st.set_defaults(func=cmd_status)
+
+    p_sync = sub.add_parser("sync-claude", help="Gera .claude/skills, .claude/agents e .mcp.json de .agents/")
+    p_sync.add_argument("--source-dir", default="", help="Raiz do repositório (padrão: detecta clone atual)")
+    p_sync.add_argument("--check", action="store_true", help="Apenas verifica divergência (exit 1 se houver)")
+    p_sync.set_defaults(func=cmd_sync_claude)
 
     args = parser.parse_args()
     return args.func(args)
+
+
+def cmd_sync_claude(args: argparse.Namespace) -> int:
+    from data_products.harness import claude_sync
+
+    root = Path(args.source_dir).resolve() if args.source_dir else detect_local_repo_root()
+    if root is None:
+        print("Erro: repositório AnalyticsAgent não encontrado (use --source-dir).", file=sys.stderr)
+        return 1
+    return claude_sync.run(root, check=args.check)
 
 
 if __name__ == "__main__":

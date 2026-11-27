@@ -1,0 +1,228 @@
+{
+  "version": "1.4.0",
+  "owner": "governance-auditor",
+  "description": "Política declarativa determinística v1.4.0: maxAgentHierarchyDepth=2, subagentRouting dos 12 sub-operadores folha, regex FinOps multilinha (I1), detecção de tokens GitHub/JWT/Azure client secret (M1) e correção de falso positivo em git push -f (M2).",
+  "security": {
+    "blockedCommandPatterns": [
+      {
+        "id": "SEC-SQL-DROP",
+        "pattern": "(?i)\\bDROP\\s+(TABLE|DATABASE|SCHEMA|LAKEHOUSE|WAREHOUSE)\\b",
+        "severity": "CRITICAL",
+        "decision": "deny",
+        "reason": "Comando destrutivo DDL (DROP) bloqueado pela política P0. Requer revisão humana e procedimento controlado."
+      },
+      {
+        "id": "SEC-SQL-TRUNCATE",
+        "pattern": "(?i)\\bTRUNCATE\\s+TABLE\\b",
+        "severity": "HIGH",
+        "decision": "force_ask",
+        "reason": "TRUNCATE TABLE exige confirmação explícita humana e SPEC aprovada."
+      },
+      {
+        "id": "SEC-AWS-S3-RM-RECURSIVE",
+        "pattern": "(?i)\\baws\\s+s3\\s+(rm|rb)\\b.*(--recursive|--force)",
+        "severity": "CRITICAL",
+        "decision": "deny",
+        "reason": "Exclusão recursiva/forçada em bucket AWS S3 bloqueada pela política P0."
+      },
+      {
+        "id": "SEC-AZURE-GROUP-DELETE",
+        "pattern": "(?i)\\baz\\s+(group|storage|fabric|synapse)\\s+delete\\b",
+        "severity": "CRITICAL",
+        "decision": "deny",
+        "reason": "Exclusão destrutiva de recursos Azure/Fabric bloqueada pela política P0."
+      },
+      {
+        "id": "SEC-MLOPS-ENDPOINT-DELETE",
+        "pattern": "(?i)\\baws\\s+(sagemaker|ecs|lambda)\\s+delete-(endpoint|service|function)\\b",
+        "severity": "HIGH",
+        "decision": "force_ask",
+        "reason": "Remoção de endpoint/serviço MLOps exige confirmação explícita humana e plano de rollback."
+      },
+      {
+        "id": "SEC-TERRAFORM-DESTROY",
+        "pattern": "(?i)\\b(terraform|pulumi)\\s+destroy\\b",
+        "severity": "CRITICAL",
+        "decision": "deny",
+        "reason": "Destruição de infraestrutura via IaC bloqueada pela política P0."
+      },
+      {
+        "id": "SEC-GIT-FORCE-PUSH",
+        "pattern": "(?i)\\bgit\\s+push\\b.*\\s(--force(-with-lease)?|-f)(?=\\s|=|$)",
+        "severity": "HIGH",
+        "decision": "deny",
+        "reason": "git push --force proibido para preservar trilha de auditoria e linhagem."
+      },
+      {
+        "id": "SEC-TLS-BYPASS-CMD",
+        "pattern": "(?i)(NODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*0|AZURE_CLI_DISABLE_CONNECTION_VERIFICATION|verify\\s*=\\s*False|\\bcurl\\b[^\\n]*\\s(-k|--insecure)\\b)",
+        "severity": "CRITICAL",
+        "decision": "deny",
+        "reason": "Proibido desativar verificação TLS (RULE-05). Configure um bundle CA corporativo via REQUESTS_CA_BUNDLE, SSL_CERT_FILE ou NODE_EXTRA_CA_CERTS."
+      }
+    ],
+    "blockedCodePatterns": [
+      {
+        "id": "SEC-TLS-BYPASS-CODE",
+        "pattern": "(?i)(verify\\s*=\\s*False|NODE_TLS_REJECT_UNAUTHORIZED\\s*=\\s*[\"']?0[\"']?|AZURE_CLI_DISABLE_CONNECTION_VERIFICATION\\s*=\\s*[\"']?(1|true)[\"']?|ssl\\._create_unverified_context)",
+        "reason": "Proibido desativar verificação TLS em código/configuração (RULE-05). Use um bundle de CAs confiável."
+      }
+    ],
+    "secretPatterns": [
+      {
+        "id": "SEC-AWS-KEY",
+        "pattern": "AKIA[0-9A-Z]{16}",
+        "reason": "Possível AWS Access Key ID detectada."
+      },
+      {
+        "id": "SEC-PRIVATE-KEY",
+        "pattern": "-----BEGIN (RSA|EC|OPENSSH|PRIVATE) KEY-----",
+        "reason": "Chave privada detectada no payload."
+      },
+      {
+        "id": "SEC-AZURE-CONN",
+        "pattern": "(?i)(AccountKey|SharedAccessSignature|DefaultEndpointsProtocol)=[^\\s;\"']{12,}",
+        "reason": "Possível connection string ou SAS token Azure detectado."
+      },
+      {
+        "id": "SEC-GENERIC-TOKEN",
+        "pattern": "(?i)\\b(api_?key|secret_key|access_token|password|passwd)\\b[\"']?\\s*[:=]\\s*[\"']?(?![A-Za-z0-9_\\-\\.~+/]*\\()[A-Za-z0-9_\\-\\.~+/]{16,}",
+        "reason": "Possível credencial hardcoded detectada (com ou sem aspas)."
+      },
+      {
+        "id": "SEC-GITHUB-TOKEN",
+        "pattern": "\\b(gh[pousr]_[A-Za-z0-9]{36,}|github_pat_[A-Za-z0-9_]{22,})\\b",
+        "reason": "Possível token do GitHub (PAT/OAuth/App) detectado."
+      },
+      {
+        "id": "SEC-JWT",
+        "pattern": "\\beyJ[A-Za-z0-9_-]{10,}\\.eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}",
+        "reason": "Possível JWT (bearer token) detectado."
+      },
+      {
+        "id": "SEC-AZURE-CLIENT-SECRET",
+        "pattern": "(?i)\\b(client_?secret|AZURE_CLIENT_SECRET)\\b[\"']?\\s*[:=]\\s*[\"']?(?![A-Za-z0-9_\\-\\.~]*\\()[A-Za-z0-9_\\-\\.~]{30,}",
+        "reason": "Possível segredo de cliente Azure / Entra ID detectado."
+      }
+    ],
+    "piiFieldKeywords": [
+      "cpf",
+      "cnpj",
+      "rg",
+      "ssn",
+      "email",
+      "telefone",
+      "celular",
+      "endereco",
+      "data_nascimento",
+      "nome_completo",
+      "cartao_credito"
+    ]
+  },
+  "mcpGovernance": {
+    "allowedServers": [
+      "fabric-mcp-server",
+      "aws-mcp",
+      "powerbi-modeling-mcp"
+    ],
+    "safeReadOnlyPatterns": [
+      "(?i)(^|[_-])(list|get|describe|search|read|show|inspect|check|refresh[_-]?metadata)"
+    ],
+    "destructiveToolPatterns": [
+      "(?i)(^|[_-])(delete|drop|remove|destroy|terminate|purge|revoke)"
+    ],
+    "mutatingToolPatterns": [
+      "(?i)(^|[_-])(create|update|patch|put|deploy|run|execute|trigger|assign|modify|write|cancel|stop)"
+    ]
+  },
+  "finops": {
+    "maxAthenaScanGbWithoutApproval": 50,
+    "maxFabricCuSecondsPerJob": 3600,
+    "requirePartitionFilterOnQueries": true,
+    "requireS3ShortcutCacheInFabric": true,
+    "maxAgentIterationsPerPhase": 3,
+    "maxAgentHierarchyDepth": 2,
+    "modelTiering": {
+      "orchestrator": "pro",
+      "planner-architect": "pro",
+      "plan-reviewer-critic": "pro",
+      "governance-auditor": "pro",
+      "literature-researcher": "flash",
+      "data-engineer": "flash",
+      "data-scientist-statistician": "pro",
+      "analytics-bi-specialist": "flash",
+      "backend-mlops-specialist": "flash",
+      "skill-curator": "flash"
+    },
+    "gemini4ModelRouting": {
+      "governance-auditor": {
+        "primary": "Gemini 4 Carbon",
+        "fallback": ["Gemini 4 Neon (Extra High)", "Gemini 4 Argon"]
+      },
+      "plan-reviewer-critic": {
+        "primary": "Gemini 4 Carbon",
+        "fallback": ["Gemini 4 Neon (Extra High)", "Gemini 4 Argon"]
+      },
+      "orchestrator": {
+        "primary": "Gemini 4 Neon (High)",
+        "fallback": ["Gemini 4 Argon"]
+      },
+      "planner-architect": {
+        "primary": "Gemini 4 Neon (High)",
+        "escalation": "Gemini 4 Carbon",
+        "fallback": ["Gemini 4 Argon"]
+      },
+      "data-scientist-statistician": {
+        "primary": "Gemini 4 Neon (High)",
+        "escalation": "Gemini 4 Carbon",
+        "fallback": ["Gemini 4 Argon"]
+      },
+      "backend-mlops-specialist": {
+        "primary": "Gemini 4 Neon (Medium)",
+        "fastWorker": "Gemini 4 Hydrogen",
+        "fallback": ["Gemini 4 Argon"]
+      },
+      "data-engineer": {
+        "primary": "Gemini 4 Hydrogen",
+        "escalation": "Gemini 4 Neon (Medium)"
+      },
+      "analytics-bi-specialist": {
+        "primary": "Gemini 4 Hydrogen",
+        "escalation": "Gemini 4 Neon (Medium)"
+      },
+      "literature-researcher": {
+        "primary": "Gemini 4 Hydrogen",
+        "escalation": "Gemini 4 Neon (Low)"
+      },
+      "skill-curator": {
+        "primary": "Gemini 4 Hydrogen"
+      }
+    },
+    "subagentRouting": {
+      "ds-eda-diagnostics": { "manager": "data-scientist-statistician", "primary": "Gemini 4 Hydrogen" },
+      "ds-statistical-modeling": { "manager": "data-scientist-statistician", "primary": "Gemini 4 Neon (High)", "escalation": "Gemini 4 Carbon" },
+      "ds-feature-engineer": { "manager": "data-scientist-statistician", "primary": "Gemini 4 Neon (Medium)" },
+      "ds-ml-validation-calibration": { "manager": "data-scientist-statistician", "primary": "Gemini 4 Neon (High)" },
+      "de-ingestion-contracts": { "manager": "data-engineer", "primary": "Gemini 4 Hydrogen" },
+      "de-medallion-spark-sql": { "manager": "data-engineer", "primary": "Gemini 4 Hydrogen", "escalation": "Gemini 4 Neon (Medium)" },
+      "de-finops-performance": { "manager": "data-engineer", "primary": "Gemini 4 Neon (Medium)" },
+      "bi-semantic-tmdl-modeler": { "manager": "analytics-bi-specialist", "primary": "Gemini 4 Hydrogen" },
+      "bi-dax-performance-auditor": { "manager": "analytics-bi-specialist", "primary": "Gemini 4 Neon (Medium)" },
+      "bi-kpi-reconciliation": { "manager": "analytics-bi-specialist", "primary": "Gemini 4 Hydrogen" },
+      "mlops-serving-api-builder": { "manager": "backend-mlops-specialist", "primary": "Gemini 4 Neon (Medium)", "fastWorker": "Gemini 4 Hydrogen" },
+      "mlops-registry-drift-monitor": { "manager": "backend-mlops-specialist", "primary": "Gemini 4 Hydrogen" }
+    },
+    "costWarningCommandPatterns": [
+      {
+        "id": "FINOPS-SELECT-STAR-NO-LIMIT",
+        "pattern": "(?is)SELECT\\s+\\*\\s+FROM\\s+(?!.*\\b(LIMIT|TOP|WHERE)\\b)",
+        "decision": "force_ask",
+        "reason": "Query 'SELECT *' sem cláusula WHERE/LIMIT pode gerar full-table scan caro no Athena/Fabric. Confirme ou adicione filtro de partição e LIMIT."
+      }
+    ]
+  },
+  "telemetry": {
+    "eventsFile": "ops/telemetry/events.jsonl",
+    "skillExtractionMinOccurrences": 2
+  }
+}

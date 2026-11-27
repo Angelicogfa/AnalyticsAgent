@@ -1,0 +1,16 @@
+{
+  "_comment": "Ferramentas liberadas por fase para `claude -p` no runtime Claude Code do orquestrador. Hooks de `.claude/settings.json` continuam ativos em todas as fases.",
+  "claudeBinEnv": "CLAUDE_BIN",
+  "maxTurns": 40,
+  "phases": {
+    "planning": {
+      "roles": ["Literature Researcher", "Planner Architect", "Plan Reviewer & Critic", "Governance Auditor", "Governance Final Verification", "Skill & Rule Curator"],
+      "allowedTools": "Read,Grep,Glob,WebSearch,WebFetch,Bash(uv run *)",
+      "permissionMode": "default"
+    },
+    "execution": {
+      "allowedTools": "Read,Grep,Glob,Write,Edit,WebSearch,WebFetch,Agent,Bash(uv run *),Bash(python *),Bash(pytest *)",
+      "permissionMode": "acceptEdits"
+    }
+  }
+}

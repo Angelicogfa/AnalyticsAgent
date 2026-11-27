@@ -213,3 +213,66 @@ uv run .agents/skills/ops-telemetry-auditor/scripts/audit_metrics.py --output op
 ```powershell
 uv run .agents/skills/skill-extractor/scripts/scaffold_skill.py --name validar-contrato-delta --description "Valida schema, partições, taxa de nulos e ausência de PII em tabelas Delta/Iceberg antes de promover para Gold." --with-script --pattern-id PAT-001
 ```
+
+---
+
+## 5. Como Operar no Claude Code (CLI / Desktop Code / IDE)
+
+A camada Claude Code é **aditiva**: `.agents/`, `AGENTS.md` e `ops/governance/policy.json` continuam sendo a fonte única de verdade e não são alterados. Tudo o que é específico do Claude Code reutiliza esses arquivos.
+
+| Antigravity (fonte) | Claude Code (ponte) | Como |
+| :--- | :--- | :--- |
+| `AGENTS.md` + `.agents/rules/` | `CLAUDE.md` | Imports `@AGENTS.md` e `@.agents/rules/*.md` (sem cópia) |
+| `.agents/skills/*/SKILL.md` | `.claude/skills/` | Gerado (cópia fiel); scripts continuam em `.agents/skills/*/scripts/` |
+| `.agents/agents/**` | `.claude/agents/**` | Gerado; Carbon→`opus`, Neon→`sonnet`, Hydrogen→`haiku` (`.claude/model_map.json`); folhas com `disallowedTools: Agent` (profundidade 2) |
+| `mcp_config.json` | `.mcp.json` | Gerado (mesmos 3 servidores) |
+| `.agents/hooks/*.py` | `.claude/hooks/*.py` | Adaptadores que importam os hooks originais (mesmas regras e telemetria, campo `harness: claude-code`) |
+| `run_workflow` + `data_task_orchestrator.py` | `.claude/workflows/run_spec_cycle.py` | Executa **o mesmo** orquestrador via `claude -p --json-schema` |
+
+### Sincronizar após alterar `.agents/`
+```powershell
+uv run scripts/warmup.py sync-claude          # regenera .claude/skills, .claude/agents e .mcp.json
+uv run scripts/warmup.py sync-claude --check  # usado no CI: falha se houver divergência
+```
+
+### Ativar os hooks no projeto
+Crie `.claude/settings.json` (requer aprovação humana; altera os guardrails da sessão):
+```json
+{
+  "hooks": {
+    "SessionStart": [{ "hooks": [{ "type": "command", "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/claude_bootstrap.py\"", "timeout": 10 }] }],
+    "PreToolUse": [{ "matcher": "Bash|PowerShell|Write|Edit|NotebookEdit|mcp__.*",
+      "hooks": [{ "type": "command", "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/claude_gate.py\"", "timeout": 10, "onFailure": "block" }] }],
+    "PostToolUse": [{ "matcher": "*", "hooks": [{ "type": "command", "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/claude_telemetry.py\"", "timeout": 10 }] }],
+    "Stop": [{ "hooks": [{ "type": "command", "command": "python \"${CLAUDE_PROJECT_DIR}/.claude/hooks/claude_stop.py\"", "timeout": 10 }] }]
+  }
+}
+```
+> `onFailure: "block"` exige Claude Code v2.1.295+. Se a política corporativa usar `allowManagedHooksOnly`, hooks de projeto não rodam — use o plugin habilitado pelo administrador.
+
+### Rodar o ciclo governado
+```powershell
+python .claude/workflows/run_spec_cycle.py --spec specs/active/SPEC-001-exemplo-cross-cloud-churn.md
+python .claude/workflows/run_spec_cycle.py --spec specs/active/SPEC-001-exemplo-cross-cloud-churn.md --execute
+```
+Ferramentas liberadas por fase ficam em `.claude/workflows/claude_runtime.json`. As tarefas executam em sequência.
+
+### Plugin global via marketplace (qualquer projeto)
+O próprio repositório é um **marketplace de plugins do Claude Code** (`.claude-plugin/marketplace.json` → `plugins/analytics-agent/`). Marketplace próprio não exige publicação nem aprovação da Anthropic; na organização, siga a política de plugins/conectores aprovados pelo administrador.
+
+```powershell
+claude plugin marketplace add Angelicogfa/AnalyticsAgent
+claude plugin install analytics-agent@analytics-agent-marketplace
+```
+Dentro de uma sessão: `/plugin install analytics-agent --marketplace Angelicogfa/AnalyticsAgent` (Claude Code 2.1.275+).
+
+- **Atualização:** `claude plugin update analytics-agent@analytics-agent-marketplace` (auto-update vem desligado em marketplaces de terceiros). O `plugin.json` não fixa `version`: cada commit publicado é uma nova versão (SHA).
+- **Administradores:** podem registrar e forçar o plugin via `extraKnownMarketplaces` + `enabledPlugins` nas configurações gerenciadas — necessário para os hooks rodarem quando `allowManagedHooksOnly` estiver ativo.
+- `plugins/analytics-agent/` é **gerado** por `sync-claude` (o CI falha se divergir); não edite manualmente.
+- Sem marketplace (desenvolvimento): `uv run scripts/warmup.py install --target claude-code` e `claude --plugin-dir "$HOME/.analytics-agent/claude-code-plugin"`.
+
+### Limites conhecidos
+- A equivalência garantida é a da camada determinística (gate, política, ciclo, schemas, scripts); respostas de Gemini e Claude diferem.
+- No modo plugin, as regras P0 não são carregadas como `CLAUDE.md` (o hook de SessionStart injeta apenas o lembrete do ciclo) e o `permissionMode` dos agentes é ignorado; no modo projeto o `CLAUDE.md` e o `permissionMode` valem.
+- As skills citam scripts em `.agents/skills/...`; em workspaces externos (modo plugin) esses caminhos não existem — mesma limitação do modo plugin do Antigravity.
+- Claude Desktop em modo chat não suporta hooks nem subagentes locais.

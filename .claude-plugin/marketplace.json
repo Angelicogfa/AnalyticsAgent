@@ -1,0 +1,13 @@
+{
+  "name": "analytics-agent-marketplace",
+  "owner": {
+    "name": "AnalyticsAgent Contributors"
+  },
+  "description": "Harness agêntico multi-cloud (Fabric + AWS) para produtos de dados — fonte única com o Antigravity.",
+  "plugins": [
+    {
+      "name": "analytics-agent",
+      "source": "./plugins/analytics-agent"
+    }
+  ]
+}

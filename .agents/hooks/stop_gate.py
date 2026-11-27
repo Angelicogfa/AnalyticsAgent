@@ -39,7 +39,7 @@ def main() -> None:
             events_path = resolve_telemetry_path(workspace_root)
             events_path.parent.mkdir(parents=True, exist_ok=True)
             record = {
-                "timestampUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
+                "timestampUtc": dt.datetime.now(dt.UTC).isoformat(),
                 "eventType": "TURN_STOP",
                 "conversationId": payload.get("conversationId", ""),
                 "modelName": payload.get("modelName", ""),
@@ -49,8 +49,8 @@ def main() -> None:
             }
             with events_path.open("a", encoding="utf-8") as fh:
                 fh.write(json.dumps(record, ensure_ascii=False) + "\n")
-        except Exception:
-            pass
+        except Exception as exc:  # telemetria nunca bloqueia o encerramento do turno
+            sys.stderr.write(f"[stop_gate] falha ao registrar telemetria: {exc}\n")
 
     sys.stdout.write("{}")
 

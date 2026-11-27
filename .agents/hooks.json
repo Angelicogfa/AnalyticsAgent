@@ -13,7 +13,7 @@
     "enabled": true,
     "PreToolUse": [
       {
-        "matcher": "run_command|write_file|edit_file|call_mcp_tool|.*fabric.*|.*aws.*|.*powerbi.*",
+        "matcher": "run_command|write_file|edit_file|write_to_file|replace_file_content|multi_replace_file_content|call_mcp_tool|.*fabric.*|.*aws.*|.*powerbi.*",
         "hooks": [
           {
             "type": "command",
