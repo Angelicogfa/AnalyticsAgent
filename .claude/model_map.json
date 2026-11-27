@@ -1,0 +1,14 @@
+{
+  "_comment": "Tradução de modelos Antigravity -> Claude Code. Usado por `warmup.py sync-claude` (agentes) e `.claude/workflows/run_spec_cycle.py` (tiers do orquestrador).",
+  "gemini4": {
+    "Carbon": "opus",
+    "Neon": "sonnet",
+    "Hydrogen": "haiku",
+    "Argon": "sonnet"
+  },
+  "tier": {
+    "pro": "opus",
+    "flash": "sonnet",
+    "flash_lite": "haiku"
+  }
+}

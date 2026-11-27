@@ -28,7 +28,10 @@ jobs:
         run: uv sync --group dev --python 3.12
 
       - name: Lint Python code (ruff)
-        run: uv run ruff check src tests .agents
+        run: uv run ruff check src tests .agents .claude
+
+      - name: Verify Claude Code layer is in sync with .agents/ (single source of truth)
+        run: uv run scripts/warmup.py sync-claude --check
 
       - name: Run harness & data product tests (pytest)
         run: uv run pytest

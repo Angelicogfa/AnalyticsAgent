@@ -179,6 +179,126 @@ def assemble_plugin(source_root: Path, target_dir: Path, include_mcp: bool = Tru
     }
 
 
+def default_claude_plugin_dir() -> Path:
+    return Path.home() / ".analytics-agent" / "claude-code-plugin"
+
+
+def _safe_reset_claude_plugin_dir(target_dir: Path) -> None:
+    """Só remove o destino se estiver vazio ou já for bundle deste plugin (não apaga diretórios alheios)."""
+    if not target_dir.exists():
+        return
+    manifest = target_dir / ".claude-plugin" / "plugin.json"
+    if manifest.exists() and json.loads(manifest.read_text(encoding="utf-8")).get("name") == PLUGIN_NAME:
+        shutil.rmtree(target_dir)
+        return
+    if any(target_dir.iterdir()):
+        raise RuntimeError(
+            f"Destino {target_dir} não está vazio e não é um bundle '{PLUGIN_NAME}'. "
+            "Escolha outro --claude-target-dir."
+        )
+
+
+def assemble_claude_plugin(source_root: Path, target_dir: Path, include_mcp: bool = True) -> dict:
+    """Monta o bundle de plugin do Claude Code a partir da mesma fonte única (.agents/)."""
+    from data_products.harness import claude_sync
+
+    agents_src = source_root / ".agents"
+    if not agents_src.exists():
+        raise FileNotFoundError(f"Diretório .agents não encontrado na origem: {source_root}")
+    _safe_reset_claude_plugin_dir(target_dir)
+    target_dir.mkdir(parents=True, exist_ok=True)
+
+    (target_dir / ".claude-plugin").mkdir(parents=True, exist_ok=True)
+    manifest = {
+        "name": PLUGIN_NAME,
+        "description": (
+            "Rede cooperativa de 22 agentes, 20 skills, regras P0/FinOps, hooks determinísticos e MCPs "
+            "para Microsoft Fabric, AWS e Power BI PBIP (mesma fonte do plugin Antigravity)."
+        ),
+        "version": PLUGIN_VERSION,
+        "homepage": REPO_HOMEPAGE,
+        "repository": REPO_HOMEPAGE,
+    }
+    (target_dir / ".claude-plugin" / "plugin.json").write_text(
+        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+    generated = claude_sync.build(source_root)
+
+    # Agentes (frontmatter traduzido), achatados em 1 nível
+    (target_dir / "agents").mkdir(parents=True, exist_ok=True)
+    agent_count = 0
+    for rel, content in generated.files.items():
+        if rel.parts[:2] == (".claude", "agents"):
+            (target_dir / "agents" / rel.name).write_text(content, encoding="utf-8")
+            agent_count += 1
+
+    # Skills completas (SKILL.md + scripts/references)
+    shutil.copytree(agents_src / "skills", target_dir / "skills")
+    skill_count = sum(1 for p in (target_dir / "skills").iterdir() if p.is_dir())
+
+    # Hooks originais + adaptadores Claude + política empacotada
+    shutil.copytree(agents_src / "hooks", target_dir / "hooks")
+    claude_hooks_src = source_root / ".claude" / "hooks"
+    shutil.copytree(
+        claude_hooks_src, target_dir / "claude_hooks", ignore=shutil.ignore_patterns("__pycache__")
+    )
+    policy_src = source_root / "ops" / "governance" / "policy.json"
+    if policy_src.exists():
+        (target_dir / "ops" / "governance").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(policy_src, target_dir / "ops" / "governance" / "policy.json")
+
+    def hook(script: str, **extra: object) -> dict:
+        entry: dict[str, object] = {
+            "type": "command",
+            "command": f'python "${{CLAUDE_PLUGIN_ROOT}}/claude_hooks/{script}"',
+            "timeout": 10,
+        }
+        entry.update(extra)
+        return entry
+
+    hooks_json = {
+        "hooks": {
+            "SessionStart": [{"hooks": [hook("claude_bootstrap.py")]}],
+            "PreToolUse": [
+                {
+                    "matcher": "Bash|PowerShell|Write|Edit|NotebookEdit|mcp__.*",
+                    "hooks": [hook("claude_gate.py", onFailure="block")],
+                }
+            ],
+            "PostToolUse": [{"matcher": "*", "hooks": [hook("claude_telemetry.py")]}],
+            "Stop": [{"hooks": [hook("claude_stop.py")]}],
+        }
+    }
+    (target_dir / "hooks" / "hooks.json").write_text(
+        json.dumps(hooks_json, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+
+    # Regras consolidadas (mesmo conteúdo do plugin Antigravity) + templates
+    (target_dir / "rules").mkdir(parents=True, exist_ok=True)
+    (target_dir / "rules" / "AGENTS.md").write_text(build_consolidated_rules(source_root), encoding="utf-8")
+    for tpl_rel in ("specs/templates", "contracts/templates", "knowledge/templates"):
+        src_tpl = source_root / tpl_rel
+        if src_tpl.exists():
+            shutil.copytree(src_tpl, target_dir / "templates" / tpl_rel.split("/")[0])
+
+    mcp_servers: list[str] = []
+    mcp_rel = Path(".mcp.json")
+    if include_mcp and mcp_rel in generated.files:
+        (target_dir / ".mcp.json").write_text(generated.files[mcp_rel], encoding="utf-8")
+        mcp_servers = sorted(json.loads(generated.files[mcp_rel]).get("mcpServers", {}).keys())
+
+    return {
+        "pluginDir": str(target_dir),
+        "version": PLUGIN_VERSION,
+        "agentsBundled": agent_count,
+        "skillsBundled": skill_count,
+        "mcpServers": mcp_servers,
+        "hooksEnabled": True,
+        "usage": f'claude --plugin-dir "{target_dir}"',
+    }
+
+
 def run_warmup_checks(source_root: Path | None) -> dict:
     v = sys.version_info
     tls_ok = (
@@ -222,6 +342,19 @@ def cmd_install(args: argparse.Namespace) -> int:
         else:
             # Executado via uvx fora de um clone local: faz pull automático do repositório oficial
             source_root = sync_git_repo(DEFAULT_REPO_URL, Path(args.cache_dir), branch=args.branch or None)
+
+    target = getattr(args, "target", "antigravity")
+    if target in ("claude-code", "all"):
+        claude_dir = Path(args.claude_target_dir).expanduser().resolve()
+        claude_info = assemble_claude_plugin(source_root, claude_dir, include_mcp=not args.no_mcp)
+        print(
+            f"Plugin Claude Code '{PLUGIN_NAME}' montado em: {claude_dir}\n"
+            f"  Agentes: {claude_info['agentsBundled']} | Skills: {claude_info['skillsBundled']} | "
+            f"MCPs: {', '.join(claude_info['mcpServers']) or 'none'}\n"
+            f"  Uso: {claude_info['usage']}"
+        )
+        if target == "claude-code":
+            return 0
 
     target_dir = Path(args.target_dir).expanduser().resolve()
     bundle_info = assemble_plugin(source_root, target_dir, include_mcp=not args.no_mcp)
@@ -369,6 +502,17 @@ def main() -> int:
     p_inst.add_argument("--target-dir", default=str(default_plugin_dir()), help="Diretório destino do plugin Antigravity")
     p_inst.add_argument("--no-mcp", action="store_true", help="Instala o plugin sem mcp_config.json")
     p_inst.add_argument("--output", default="", help="Caminho opcional do relatório JSON de warmup")
+    p_inst.add_argument(
+        "--target",
+        choices=["antigravity", "claude-code", "all"],
+        default="antigravity",
+        help="Harness de destino (padrão: antigravity, comportamento original)",
+    )
+    p_inst.add_argument(
+        "--claude-target-dir",
+        default=str(default_claude_plugin_dir()),
+        help="Diretório destino do bundle de plugin do Claude Code (uso: claude --plugin-dir <dir>)",
+    )
     p_inst.set_defaults(func=cmd_install)
 
     p_ws = sub.add_parser("init-workspace", help="Prepara pastas de trabalho num projeto externo sem copiar .agents/")
@@ -380,8 +524,23 @@ def main() -> int:
     p_st.add_argument("--target-dir", default=str(default_plugin_dir()), help="Diretório do plugin Antigravity")
     p_st.set_defaults(func=cmd_status)
 
+    p_sync = sub.add_parser("sync-claude", help="Gera .claude/skills, .claude/agents e .mcp.json de .agents/")
+    p_sync.add_argument("--source-dir", default="", help="Raiz do repositório (padrão: detecta clone atual)")
+    p_sync.add_argument("--check", action="store_true", help="Apenas verifica divergência (exit 1 se houver)")
+    p_sync.set_defaults(func=cmd_sync_claude)
+
     args = parser.parse_args()
     return args.func(args)
+
+
+def cmd_sync_claude(args: argparse.Namespace) -> int:
+    from data_products.harness import claude_sync
+
+    root = Path(args.source_dir).resolve() if args.source_dir else detect_local_repo_root()
+    if root is None:
+        print("Erro: repositório AnalyticsAgent não encontrado (use --source-dir).", file=sys.stderr)
+        return 1
+    return claude_sync.run(root, check=args.check)
 
 
 if __name__ == "__main__":
