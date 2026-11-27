@@ -1,0 +1,17 @@
+{
+  "version": "1.0.0",
+  "extractionThresholdOccurrences": 2,
+  "description": "Registro de tarefas repetitivas observadas nas execuções. Quando occurrences >= 2 e extractedSkill == null, o skill-curator deve extrair uma SKILL padronizada em .agents/skills/.",
+  "patterns": [
+    {
+      "id": "PAT-001",
+      "name": "validacao-contrato-delta-iceberg",
+      "domain": "data-engineering",
+      "clouds": ["aws", "azure-fabric"],
+      "description": "Validar schema, partições, taxa de nulos e ausência de PII em tabelas Delta/Iceberg antes de promover de Silver para Gold.",
+      "occurrences": 1,
+      "specIds": ["SPEC-001"],
+      "extractedSkill": null
+    }
+  ]
+}

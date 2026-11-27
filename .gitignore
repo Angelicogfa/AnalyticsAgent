@@ -1,0 +1,45 @@
+# Segredos e variáveis locais
+.env
+.env.*
+*.pem
+*.key
+*.pfx
+credentials.json
+secrets.json
+
+# Python / uv
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Dados brutos e saídas pesadas (CCDS v2 — nunca versionar datasets com PII ou arquivos grandes)
+data/raw/*
+!data/raw/.gitkeep
+data/interim/*
+!data/interim/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+data/external/*
+!data/external/.gitkeep
+*.parquet
+*.csv
+*.xlsx
+*.duckdb
+
+# Power BI binários e caches locais (obrigatório usar .pbip + TMDL + PBIR)
+*.pbix
+*.pbit
+*.abf
+.pbi/cache.abf
+.pbi/localSettings.json
+
+# Índice local SQLite FTS5 da camada knowledge/ (reconstruível via knowledge_cli.py index)
+knowledge/.index/*.db
+knowledge/.index/*.db-wal
+knowledge/.index/*.db-shm
+
+# Telemetria local transitória (mantenha relatórios agregados se desejar)
+ops/telemetry/events.jsonl
+ops/telemetry/*.tmp

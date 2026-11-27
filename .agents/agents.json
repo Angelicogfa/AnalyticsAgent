@@ -1,0 +1,9 @@
+{
+  "entries": [
+    { "path": ".agents/agents/core" },
+    { "path": ".agents/agents/data-science" },
+    { "path": ".agents/agents/data-engineering" },
+    { "path": ".agents/agents/analytics-bi" },
+    { "path": ".agents/agents/backend-mlops" }
+  ]
+}

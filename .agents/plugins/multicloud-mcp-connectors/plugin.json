@@ -1,0 +1,4 @@
+{
+  "name": "multicloud-mcp-connectors",
+  "description": "Conectores MCP oficiais para Microsoft Fabric e AWS usando credenciais locais do usuário (az login / aws login), sem segredos em arquivo."
+}

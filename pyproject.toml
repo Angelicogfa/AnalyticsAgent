@@ -1,0 +1,81 @@
+[build-system]
+requires = ["hatchling>=1.25.0"]
+build-backend = "hatchling.build"
+
+[project]
+name = "analytics-agent-data-products"
+version = "0.1.0"
+description = "Template aberto de repositório agêntico multi-cloud (Microsoft Fabric + AWS) para produtos de dados (Engenharia, Ciência de Dados, Estatística, Analytics/PBIP e MLOps)."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.11,<3.13"
+authors = [
+  { name = "AnalyticsAgent Contributors" }
+]
+keywords = [
+  "data-products",
+  "agentic-ai",
+  "antigravity",
+  "microsoft-fabric",
+  "aws",
+  "mlops",
+  "data-contracts",
+  "odcs",
+  "powerbi-pbip",
+]
+dependencies = []
+
+[project.scripts]
+analytics-agent-warmup = "data_products.harness.warmup:main"
+
+[project.optional-dependencies]
+fabric = [
+  "azure-identity>=1.17.0",
+  "requests>=2.32.0",
+  "mssql-python>=0.9.0",
+]
+aws = [
+  "boto3>=1.35.0",
+]
+science = [
+  "numpy>=1.26.0",
+  "pandas>=2.2.0",
+  "scipy>=1.13.0",
+  "scikit-learn>=1.5.0",
+  "statsmodels>=0.14.0",
+]
+mlops = [
+  "fastapi>=0.115.0",
+  "pydantic>=2.8.0",
+  "mlflow>=2.16.0",
+]
+contracts = [
+  "pyyaml>=6.0.2",
+  "pydantic>=2.8.0",
+]
+
+[dependency-groups]
+dev = [
+  "pytest>=8.3.0",
+  "ruff>=0.7.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/data_products"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 110
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "S"]
+ignore = [
+  "S101",  # assert permitido em testes e invariantes internas
+  "S603",  # subprocess controlado em CLIs determinísticas do harness
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-ra -q"

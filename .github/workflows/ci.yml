@@ -1,0 +1,52 @@
+name: Data Product & Agentic Harness CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  validate-harness-and-products:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python 3.12 (RULE-05 compatible)
+        run: uv python install 3.12
+
+      - name: Sync dev dependencies
+        run: uv sync --group dev --python 3.12
+
+      - name: Lint Python code (ruff)
+        run: uv run ruff check src tests .agents
+
+      - name: Run harness & data product tests (pytest)
+        run: uv run pytest
+
+      - name: Validate internal & active SPECs
+        run: |
+          for spec in specs/internal/*.md specs/active/*.md; do
+            [ -e "$spec" ] || continue
+            uv run .agents/skills/spec-lifecycle/scripts/spec_cli.py validate --spec "$spec"
+          done
+
+      - name: Run PBIP / TMDL / PBIR performance pre-check
+        run: |
+          uv run .agents/skills/powerbi-pbip-semantic-ops/scripts/pbip_precheck.py \
+            --path src/data_products/analytics/pbip \
+            --output ops/telemetry/ci_pbip_report.json
+
+      - name: Verify knowledge/ FTS5 indexing
+        run: |
+          uv run .agents/skills/internal-knowledge-base/scripts/knowledge_cli.py \
+            index --output ops/telemetry/ci_kb_index.json

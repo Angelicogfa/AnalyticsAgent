@@ -1,0 +1,52 @@
+{
+  "session-bootstrap": {
+    "enabled": true,
+    "SessionStart": [
+      {
+        "type": "command",
+        "command": "python ./hooks/session_bootstrap.py",
+        "timeout": 10
+      }
+    ]
+  },
+  "security-and-finops-gate": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "run_command|write_file|edit_file|call_mcp_tool|.*fabric.*|.*aws.*|.*powerbi.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python ./hooks/security_finops_gate.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "ops-telemetry-logger": {
+    "enabled": true,
+    "PostToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python ./hooks/telemetry_logger.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  },
+  "session-stop-summary": {
+    "enabled": true,
+    "Stop": [
+      {
+        "type": "command",
+        "command": "python ./hooks/stop_gate.py",
+        "timeout": 10
+      }
+    ]
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "version": "1.0.0",
+  "description": "Catálogo estruturado de fontes e notas destiladas da base de conhecimento interna (knowledge/).",
+  "domains": [
+    "data-science",
+    "statistics",
+    "data-engineering",
+    "analytics-bi",
+    "mlops-backend"
+  ],
+  "entries": [
+    {
+      "kbId": "KB-001",
+      "title": "Exemplo de Nota — Dinâmica de Validação e Premissas em Ciência de Dados",
+      "domain": "data-science",
+      "sourceType": "example-note",
+      "sourceFile": "knowledge/data-science/KB-001-exemplo-dinamica-ciencia-de-dados.md",
+      "noteFile": "knowledge/data-science/KB-001-exemplo-dinamica-ciencia-de-dados.md",
+      "tags": [
+        "validacao",
+        "data-leakage",
+        "premissas",
+        "out-of-time",
+        "dinamica-ds"
+      ],
+      "status": "ACTIVE",
+      "promotedToSkill": null,
+      "promotedToRule": null,
+      "addedAt": "2026-11-27"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "name": "data-task-orchestrator",
+  "description": "Orquestrador multi-agente para tarefas de Engenharia de Dados, Ciência de Dados, Estatística e Analytics (Microsoft Fabric + AWS) com ciclo obrigatório Literatura -> Plano -> Revisão -> Crítica -> Auditoria (VETO) -> Execução -> Verificação -> Curadoria.",
+  "entry": "data_task_orchestrator.py",
+  "args": {
+    "type": "object",
+    "required": ["spec_path"],
+    "properties": {
+      "spec_path": {
+        "type": "string",
+        "description": "Caminho relativo ou absoluto para a SPEC em specs/active/SPEC-NNN-*.md"
+      },
+      "execute": {
+        "type": "boolean",
+        "default": false,
+        "description": "Se false (padrão HITL), para após a aprovação do plano pelo governance-auditor para revisão humana. Se true, executa as tarefas aprovadas."
+      },
+      "max_plan_cycles": {
+        "type": "integer",
+        "default": 3,
+        "minimum": 1,
+        "maximum": 3,
+        "description": "Circuit breaker: máximo de ciclos Plano -> Revisão -> Crítica -> Auditoria."
+      }
+    }
+  }
+}
