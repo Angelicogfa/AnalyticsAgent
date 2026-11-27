@@ -333,6 +333,8 @@ def test_dual_mode_global_plugin_install_and_init_workspace(tmp_path: Path) -> N
     # Verifica artefatos nativos de plugin Antigravity
     manifest = json.loads((plugin_dir / "plugin.json").read_text(encoding="utf-8"))
     assert manifest["name"] == "analytics-agent"
+    assert manifest.get("logo") == "assets/logo.svg"
+    assert (plugin_dir / "assets" / "logo.svg").exists()
     assert (plugin_dir / "mcp_config.json").exists()
     assert (plugin_dir / "hooks.json").exists()
     assert (plugin_dir / "ops" / "governance" / "policy.json").exists()

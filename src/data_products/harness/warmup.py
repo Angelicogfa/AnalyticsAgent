@@ -111,6 +111,13 @@ def assemble_plugin(source_root: Path, target_dir: Path, include_mcp: bool = Tru
             "Audite meus arquivos .pbip/TMDL ou contratos ODCS v3 com os pré-checks determinísticos",
         ],
     }
+
+    logo_src = source_root / "assets" / "logo.svg"
+    if logo_src.exists():
+        (target_dir / "assets").mkdir(parents=True, exist_ok=True)
+        shutil.copy2(logo_src, target_dir / "assets" / "logo.svg")
+        manifest["logo"] = "assets/logo.svg"
+
     (target_dir / "plugin.json").write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
     # 2. Rules consolidadas (< 24 KB garantido)
