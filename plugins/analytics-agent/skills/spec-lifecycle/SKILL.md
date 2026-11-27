@@ -17,21 +17,21 @@ Sempre execute via `uv run` (ou `python`):
 
 1. **Criar nova SPEC a partir de template:**
    ```powershell
-   uv run .agents/skills/spec-lifecycle/scripts/spec_cli.py create --type engineering --slug ingestao-pedidos-s3-fabric --clouds aws,azure-fabric
+   uv run ${CLAUDE_PLUGIN_ROOT}/skills/spec-lifecycle/scripts/spec_cli.py create --type engineering --slug ingestao-pedidos-s3-fabric --clouds aws,azure-fabric
    ```
    Tipos suportados: `engineering`, `science`, `analytics`, `mlops`, `runtime`.
 
 2. **Validar estrutura e pré-requisitos de uma SPEC:**
    ```powershell
-   uv run .agents/skills/spec-lifecycle/scripts/spec_cli.py validate --spec specs/active/SPEC-001-exemplo-cross-cloud-churn.md
+   uv run ${CLAUDE_PLUGIN_ROOT}/skills/spec-lifecycle/scripts/spec_cli.py validate --spec specs/active/SPEC-001-exemplo-cross-cloud-churn.md
    ```
 
 3. **Avançar status respeitando a máquina de estados (proíbe pular fases):**
    ```powershell
-   uv run .agents/skills/spec-lifecycle/scripts/spec_cli.py transition --spec specs/active/SPEC-001-exemplo-cross-cloud-churn.md --to PLANNED
+   uv run ${CLAUDE_PLUGIN_ROOT}/skills/spec-lifecycle/scripts/spec_cli.py transition --spec specs/active/SPEC-001-exemplo-cross-cloud-churn.md --to PLANNED
    ```
 
 4. **Arquivar SPEC concluída (`COMPLETED`):**
    ```powershell
-   uv run .agents/skills/spec-lifecycle/scripts/spec_cli.py archive --spec specs/active/SPEC-001-exemplo-cross-cloud-churn.md
+   uv run ${CLAUDE_PLUGIN_ROOT}/skills/spec-lifecycle/scripts/spec_cli.py archive --spec specs/active/SPEC-001-exemplo-cross-cloud-churn.md
    ```

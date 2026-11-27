@@ -58,7 +58,7 @@ def validate_contract(path: Path) -> dict:
     blockers = sum(1 for f in findings if f["severity"] == "BLOCKER")
     majors = sum(1 for f in findings if f["severity"] == "MAJOR")
     return {
-        "generatedAtUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "generatedAtUtc": dt.datetime.now(dt.UTC).isoformat(),
         "contract": str(path),
         "passed": blockers == 0,
         "counts": {"BLOCKER": blockers, "MAJOR": majors},

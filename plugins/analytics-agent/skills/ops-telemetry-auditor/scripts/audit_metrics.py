@@ -7,11 +7,36 @@ import argparse
 import collections
 import datetime as dt
 import json
+import os
 from pathlib import Path
 
 
-def repo_root() -> Path:
+def resolve_workspace(workspace_arg: str = "") -> Path:
+    if workspace_arg:
+        return Path(workspace_arg).expanduser().resolve()
+    for env_key in ("ANALYTICS_AGENT_WORKSPACE", "CLAUDE_PROJECT_DIR"):
+        raw = os.environ.get(env_key, "").strip()
+        if raw:
+            return Path(raw).expanduser().resolve()
+    cwd = Path.cwd()
+    if any((cwd / marker).exists() for marker in ("ops", "specs", "contracts", ".git")):
+        return cwd
     return Path(__file__).resolve().parents[4]
+
+
+def resolve_events_file(workspace: Path, explicit_events: str) -> Path:
+    if explicit_events:
+        return Path(explicit_events)
+    ws_events = workspace / "ops" / "telemetry" / "events.jsonl"
+    if ws_events.exists():
+        return ws_events
+    for env_key in ("PLUGIN_DATA", "CLAUDE_PLUGIN_DATA"):
+        raw = os.environ.get(env_key, "").strip()
+        if raw:
+            candidate = Path(raw) / "telemetry" / "events.jsonl"
+            if candidate.exists():
+                return candidate
+    return ws_events
 
 
 def main() -> int:
@@ -21,11 +46,12 @@ def main() -> int:
         default="",
         help="Caminho opcional para events.jsonl (padrão: ops/telemetry/events.jsonl)",
     )
+    parser.add_argument("--workspace", default="", help="Raiz do workspace alvo")
     parser.add_argument("--output", required=True, help="Caminho do relatório JSON de saída")
     args = parser.parse_args()
 
-    root = repo_root()
-    events_path = Path(args.events) if args.events else (root / "ops" / "telemetry" / "events.jsonl")
+    root = resolve_workspace(args.workspace)
+    events_path = resolve_events_file(root, args.events)
     registry_path = root / "ops" / "patterns" / "repetitive_tasks_registry.json"
 
     total_events = 0
@@ -76,7 +102,7 @@ def main() -> int:
     error_rate = round(total_tool_errors / total_tool_calls, 4) if total_tool_calls else 0.0
 
     report = {
-        "generatedAtUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "generatedAtUtc": dt.datetime.now(dt.UTC).isoformat(),
         "eventsFile": str(events_path),
         "totalEvents": total_events,
         "toolMetrics": {

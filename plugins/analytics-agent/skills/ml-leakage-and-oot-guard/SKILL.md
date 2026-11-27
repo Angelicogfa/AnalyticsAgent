@@ -10,7 +10,7 @@ description: >-
 
 ## Execução Determinística (`scripts/check_leakage.py`)
 ```powershell
-uv run .agents/skills/ml-leakage-and-oot-guard/scripts/check_leakage.py `
+uv run ${CLAUDE_PLUGIN_ROOT}/skills/ml-leakage-and-oot-guard/scripts/check_leakage.py `
   --path src/data_products/science `
   --output ops/telemetry/ml_leakage_report.json
 ```

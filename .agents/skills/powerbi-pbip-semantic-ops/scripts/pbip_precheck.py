@@ -241,7 +241,7 @@ def main() -> int:
     passed = counts["BLOCKER"] == 0
 
     report = {
-        "generatedAtUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "generatedAtUtc": dt.datetime.now(dt.UTC).isoformat(),
         "scannedPath": str(target),
         "summary": {
             "pbipProjectsFound": len(pbip_files),

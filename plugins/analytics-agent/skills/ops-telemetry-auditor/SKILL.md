@@ -13,7 +13,7 @@ Converte os eventos gravados automaticamente pelos hooks (`security_finops_gate.
 
 ## Execução Determinística
 ```powershell
-uv run .agents/skills/ops-telemetry-auditor/scripts/audit_metrics.py --output ops/telemetry/audit_report.json
+uv run ${CLAUDE_PLUGIN_ROOT}/skills/ops-telemetry-auditor/scripts/audit_metrics.py --output ops/telemetry/audit_report.json
 ```
 
 ## O que o Relatório Mede

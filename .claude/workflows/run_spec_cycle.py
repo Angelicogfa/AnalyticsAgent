@@ -1,14 +1,7 @@
 #!/usr/bin/env python3
 """Runtime Claude Code para o MESMO orquestrador do Antigravity.
 
-Arquivo executado: `.agents/workflows/data_task_orchestrator.py`.
-
-O Antigravity injeta no script os primitivos `args`, `WORKSPACES`, `phase`, `log`, `agent` e `pipeline`.
-Este runtime fornece esses mesmos primitivos e executa o arquivo original sem modificações — ciclo,
-circuit breaker, schemas e prompts permanecem idênticos entre os harnesses.
-
-`agent(...)` é implementado com `claude -p --output-format json --json-schema <schema> --model <alias>`,
-usando o login local do Claude Code (os hooks do projeto continuam ativos).
+Arquivo executado: `.agents/workflows/data_task_orchestrator.py` (ou `<plugin>/workflows/` em modo plugin).
 
 Uso:
   python .claude/workflows/run_spec_cycle.py --spec specs/active/SPEC-001-exemplo-cross-cloud-churn.md
@@ -29,8 +22,20 @@ import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-REPO_ROOT = HERE.parents[1]
-ORCHESTRATOR = REPO_ROOT / ".agents" / "workflows" / "data_task_orchestrator.py"
+
+
+def _resolve_asset(plugin_rel: str, repo_rel: str) -> Path:
+    """Resolve arquivo tanto em modo plugin (`<plugin>/workflows/`) quanto no repositório."""
+    in_plugin = HERE / plugin_rel
+    if in_plugin.exists():
+        return in_plugin
+    repo_root = HERE.parents[1]
+    return repo_root / repo_rel
+
+
+ORCHESTRATOR = _resolve_asset("data_task_orchestrator.py", ".agents/workflows/data_task_orchestrator.py")
+RUNTIME_CFG = _resolve_asset("claude_runtime.json", ".claude/workflows/claude_runtime.json")
+MODEL_MAP = _resolve_asset("model_map.json", ".claude/model_map.json")
 
 
 def load_json(path: Path) -> dict:
@@ -48,7 +53,6 @@ class ClaudeRuntime:
     @staticmethod
     def _resolve_cmd(bin_env: str) -> list[str]:
         if bin_env:
-            # Permite stub Python em testes: CLAUDE_BIN=/caminho/stub.py
             return [sys.executable, bin_env] if bin_env.endswith(".py") else [bin_env]
         found = shutil.which("claude")
         if not found:
@@ -61,7 +65,6 @@ class ClaudeRuntime:
             return planning
         return self.cfg["phases"]["execution"]
 
-    # --- Primitivos esperados pelo orquestrador ---------------------------------
     def phase(self, name: str) -> None:
         print(f"\n=== {name} ===", file=sys.stderr, flush=True)
 
@@ -108,16 +111,11 @@ class ClaudeRuntime:
         return structured
 
     async def pipeline(self, items: list, fn) -> list:
-        # Sequencial: o plano não declara dependências entre tarefas; opção mais conservadora.
         return [await fn(item) for item in items]
 
 
 async def run(spec: str, execute: bool, max_cycles: int, workspace: Path) -> None:
-    runtime = ClaudeRuntime(
-        workspace,
-        load_json(HERE / "claude_runtime.json"),
-        load_json(REPO_ROOT / ".claude" / "model_map.json"),
-    )
+    runtime = ClaudeRuntime(workspace, load_json(RUNTIME_CFG), load_json(MODEL_MAP))
     namespace = {
         "__name__": "__orchestrator__",
         "args": {"spec_path": spec, "execute": execute, "max_plan_cycles": max_cycles},
@@ -143,9 +141,10 @@ def main() -> int:
     parser.add_argument("--spec", required=True, help="Caminho da SPEC (ex.: specs/active/SPEC-001-*.md)")
     parser.add_argument("--execute", action="store_true", help="Executa as tarefas após aprovação (HITL).")
     parser.add_argument("--max-plan-cycles", type=int, default=3, choices=[1, 2, 3])
-    parser.add_argument("--workspace", default=str(REPO_ROOT), help="Raiz do workspace (padrão: repositório)")
+    parser.add_argument("--workspace", default="", help="Raiz do workspace (padrão: diretório atual)")
     ns = parser.parse_args()
-    asyncio.run(run(ns.spec, ns.execute, ns.max_plan_cycles, Path(ns.workspace).resolve()))
+    ws = Path(ns.workspace).resolve() if ns.workspace else Path.cwd()
+    asyncio.run(run(ns.spec, ns.execute, ns.max_plan_cycles, ws))
     return 0
 
 

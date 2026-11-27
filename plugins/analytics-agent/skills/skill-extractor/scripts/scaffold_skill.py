@@ -5,21 +5,32 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 from pathlib import Path
 
 
-def repo_root() -> Path:
+def resolve_workspace(workspace_arg: str = "") -> Path:
+    if workspace_arg:
+        return Path(workspace_arg).expanduser().resolve()
+    for env_key in ("ANALYTICS_AGENT_WORKSPACE", "CLAUDE_PROJECT_DIR"):
+        raw = os.environ.get(env_key, "").strip()
+        if raw:
+            return Path(raw).expanduser().resolve()
+    cwd = Path.cwd()
+    if any((cwd / marker).exists() for marker in (".agents", "ops", "specs", ".git")):
+        return cwd
     return Path(__file__).resolve().parents[4]
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Scaffold padronizado de nova Antigravity SKILL.")
     parser.add_argument("--name", required=True, help="Nome da skill em kebab-case (<=64 chars)")
-    parser.add_argument("--description", required=True, help="Descrição em terceira pessoa de quando usar a skill")
+    parser.add_argument("--description", required=True, help="Descrição em terceira pessoa de quando usar")
     parser.add_argument("--with-script", action="store_true", help="Inclui template de script CLI em scripts/")
     parser.add_argument("--pattern-id", default="", help="Opcional: ID do padrão em repetitive_tasks_registry.json")
+    parser.add_argument("--workspace", default="", help="Raiz do workspace alvo")
     args = parser.parse_args()
 
     name = args.name.strip().lower()
@@ -27,7 +38,7 @@ def main() -> int:
         print("Erro: --name deve estar em kebab-case (a-z, 0-9, hífens, 2-63 chars).", file=sys.stderr)
         return 1
 
-    root = repo_root()
+    root = resolve_workspace(args.workspace)
     skill_dir = root / ".agents" / "skills" / name
     if skill_dir.exists():
         print(f"Erro: skill '{name}' já existe em {skill_dir}", file=sys.stderr)
@@ -63,7 +74,8 @@ def main() -> int:
         )
         script_section = (
             "\n## Script Determinístico\n"
-            f"Execute via `uv run .agents/skills/{name}/scripts/{script_path.name} --output <arquivo.json>`.\n"
+            f"Execute via `uv run .agents/skills/{name}/scripts/{script_path.name} "
+            "--output <arquivo.json>`.\n"
         )
 
     skill_md = (
@@ -97,7 +109,9 @@ def main() -> int:
                     item["extractedSkill"] = name
                     updated_registry = True
             if updated_registry:
-                reg_path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+                reg_path.write_text(
+                    json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+                )
 
     print(
         json.dumps(

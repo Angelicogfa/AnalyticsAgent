@@ -10,7 +10,7 @@ description: >-
 
 ## Execução Determinística (`scripts/scaffold_pipeline.py`)
 ```powershell
-uv run .agents/skills/medallion-pipeline-scaffolder/scripts/scaffold_pipeline.py `
+uv run ${CLAUDE_PLUGIN_ROOT}/skills/medallion-pipeline-scaffolder/scripts/scaffold_pipeline.py `
   --spec-id SPEC-001 `
   --domain commercial `
   --slug silver-product-usage `

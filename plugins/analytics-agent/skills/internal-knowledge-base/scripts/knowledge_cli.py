@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import re
 import sqlite3
 import sys
@@ -21,7 +22,16 @@ from pathlib import Path
 DOMAINS = ["data-science", "statistics", "data-engineering", "analytics-bi", "mlops-backend"]
 
 
-def repo_root() -> Path:
+def resolve_workspace(workspace_arg: str = "") -> Path:
+    if workspace_arg:
+        return Path(workspace_arg).expanduser().resolve()
+    for env_key in ("ANALYTICS_AGENT_WORKSPACE", "CLAUDE_PROJECT_DIR"):
+        raw = os.environ.get(env_key, "").strip()
+        if raw:
+            return Path(raw).expanduser().resolve()
+    cwd = Path.cwd()
+    if any((cwd / marker).exists() for marker in ("knowledge", "specs", "contracts", "ops", ".git")):
+        return cwd
     return Path(__file__).resolve().parents[4]
 
 
@@ -74,6 +84,8 @@ def chunk_markdown_by_heading(text: str) -> list[tuple[str, int, str]]:
 
 def find_pending_pdfs(root: Path) -> list[dict]:
     kb = kb_root(root)
+    if not kb.exists():
+        return []
     cat_path = kb / "catalog.json"
     registered_sources: set[str] = set()
     if cat_path.exists():
@@ -117,7 +129,7 @@ def init_db(conn: sqlite3.Connection) -> None:
 
 
 def cmd_index(args: argparse.Namespace) -> int:
-    root = repo_root()
+    root = resolve_workspace(args.workspace)
     kb = kb_root(root)
     index_db = db_path(root)
     index_db.parent.mkdir(parents=True, exist_ok=True)
@@ -145,7 +157,8 @@ def cmd_index(args: argparse.Namespace) -> int:
             for heading, start_line, body in chunks:
                 conn.execute(
                     """
-                    INSERT INTO chunks_fts (kb_id, title, domain, tags, file_path, heading, start_line, content)
+                    INSERT INTO chunks_fts
+                        (kb_id, title, domain, tags, file_path, heading, start_line, content)
                     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     """,
                     (kb_id, title, domain, tags, rel_path, heading, start_line, body),
@@ -159,7 +172,7 @@ def cmd_index(args: argparse.Namespace) -> int:
 
     pending_pdfs = find_pending_pdfs(root)
     report = {
-        "generatedAtUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "generatedAtUtc": dt.datetime.now(dt.UTC).isoformat(),
         "indexDb": str(index_db.relative_to(root)).replace("\\", "/"),
         "filesIndexed": files_indexed,
         "chunksIndexed": chunks_indexed,
@@ -185,7 +198,7 @@ def build_fts_query(raw_query: str) -> str:
 
 
 def cmd_search(args: argparse.Namespace) -> int:
-    root = repo_root()
+    root = resolve_workspace(args.workspace)
     index_db = db_path(root)
     if not index_db.exists():
         print("Erro: índice FTS5 não existe ainda. Execute o subcomando 'index' primeiro.", file=sys.stderr)
@@ -243,13 +256,17 @@ def cmd_search(args: argparse.Namespace) -> int:
 
 
 def cmd_status(args: argparse.Namespace) -> int:
-    root = repo_root()
+    root = resolve_workspace(args.workspace)
     kb = kb_root(root)
     cat_path = kb / "catalog.json"
-    entries = json.loads(cat_path.read_text(encoding="utf-8")).get("entries", []) if cat_path.exists() else []
+    entries = (
+        json.loads(cat_path.read_text(encoding="utf-8")).get("entries", [])
+        if cat_path.exists()
+        else []
+    )
     pending = find_pending_pdfs(root)
     report = {
-        "generatedAtUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "generatedAtUtc": dt.datetime.now(dt.UTC).isoformat(),
         "indexExists": db_path(root).exists(),
         "catalogEntries": len(entries),
         "pendingPdfs": pending,
@@ -257,14 +274,22 @@ def cmd_status(args: argparse.Namespace) -> int:
     out = Path(args.output)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(f"Status knowledge/: {len(entries)} entrada(s) catalogada(s), {len(pending)} PDF(s) pendente(s). Saída: {out}")
+    print(
+        f"Status knowledge/: {len(entries)} entrada(s) catalogada(s), "
+        f"{len(pending)} PDF(s) pendente(s). Saída: {out}"
+    )
     return 0
 
 
 def cmd_register(args: argparse.Namespace) -> int:
-    root = repo_root()
+    root = resolve_workspace(args.workspace)
     cat_path = kb_root(root) / "catalog.json"
-    data = json.loads(cat_path.read_text(encoding="utf-8")) if cat_path.exists() else {"version": "1.0.0", "entries": []}
+    cat_path.parent.mkdir(parents=True, exist_ok=True)
+    data = (
+        json.loads(cat_path.read_text(encoding="utf-8"))
+        if cat_path.exists()
+        else {"version": "1.0.0", "entries": []}
+    )
 
     entry = {
         "kbId": args.kb_id.upper(),
@@ -293,6 +318,7 @@ def main() -> int:
     sub = parser.add_subparsers(dest="command", required=True)
 
     p_idx = sub.add_parser("index", help="Indexar notas .md no SQLite FTS5 e detectar PDFs pendentes")
+    p_idx.add_argument("--workspace", default="", help="Raiz do workspace alvo")
     p_idx.add_argument("--output", required=True)
     p_idx.set_defaults(func=cmd_index)
 
@@ -300,10 +326,12 @@ def main() -> int:
     p_src.add_argument("--query", required=True)
     p_src.add_argument("--domain", choices=DOMAINS, default="")
     p_src.add_argument("--limit", type=int, required=True)
+    p_src.add_argument("--workspace", default="", help="Raiz do workspace alvo")
     p_src.add_argument("--output", required=True)
     p_src.set_defaults(func=cmd_search)
 
     p_st = sub.add_parser("status", help="Consultar status do catálogo e PDFs pendentes")
+    p_st.add_argument("--workspace", default="", help="Raiz do workspace alvo")
     p_st.add_argument("--output", required=True)
     p_st.set_defaults(func=cmd_status)
 
@@ -315,6 +343,7 @@ def main() -> int:
     p_reg.add_argument("--source-file", required=True)
     p_reg.add_argument("--note-file", required=True)
     p_reg.add_argument("--tags", default="")
+    p_reg.add_argument("--workspace", default="", help="Raiz do workspace alvo")
     p_reg.set_defaults(func=cmd_register)
 
     args = parser.parse_args()

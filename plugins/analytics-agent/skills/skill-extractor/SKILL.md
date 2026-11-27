@@ -2,7 +2,7 @@
 name: skill-extractor
 description: >-
   Extrai tarefas repetitivas executadas pelos agentes (>= 2 ocorrências) em novas SKILLs padronizadas
-  em .agents/skills/<nome>/ com divulgação progressiva e scripts CLI opcionais.
+  em ${CLAUDE_PLUGIN_ROOT}/skills/<nome>/ com divulgação progressiva e scripts CLI opcionais.
   Use ao concluir uma SPEC recorrente ou quando o skill-curator/governance-auditor sinalizar um padrão repetitivo.
 ---
 
@@ -18,7 +18,7 @@ description: >-
    - Se é puramente protocolo de raciocínio/coordenação → gere sem script.
 2. **Gerar o esqueleto validado da nova SKILL:**
    ```powershell
-   uv run .agents/skills/skill-extractor/scripts/scaffold_skill.py --name <nome-kebab-case> --description "<Quando usar em terceira pessoa>" --with-script --pattern-id PAT-001
+   uv run ${CLAUDE_PLUGIN_ROOT}/skills/skill-extractor/scripts/scaffold_skill.py --name <nome-kebab-case> --description "<Quando usar em terceira pessoa>" --with-script --pattern-id PAT-001
    ```
 3. **Preencher instruções enxutas (`SKILL.md`):**
    - Mantenha `SKILL.md` conciso; coloque documentação longa em `references/`.

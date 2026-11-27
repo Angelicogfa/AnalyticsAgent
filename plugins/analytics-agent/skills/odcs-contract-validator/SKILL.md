@@ -10,7 +10,7 @@ description: >-
 
 ## Execução Determinística (`scripts/validate_odcs.py`)
 ```powershell
-uv run .agents/skills/odcs-contract-validator/scripts/validate_odcs.py `
+uv run ${CLAUDE_PLUGIN_ROOT}/skills/odcs-contract-validator/scripts/validate_odcs.py `
   --contract contracts/templates/data-contract.odcs.yaml `
   --output ops/telemetry/odcs_validation.json
 ```

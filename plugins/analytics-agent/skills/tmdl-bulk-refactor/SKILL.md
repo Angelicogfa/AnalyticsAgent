@@ -14,7 +14,7 @@ Ao padronizar múltiplas tabelas, medidas ou relacionamentos em projetos `.pbip`
 ## Etapas Padronizadas
 1. **Inventário Inicial:** Rode primeiro o pré-check para listar todas as pendências em arquivo:
    ```powershell
-   uv run .agents/skills/powerbi-pbip-semantic-ops/scripts/pbip_precheck.py `
+   uv run ${CLAUDE_PLUGIN_ROOT}/skills/powerbi-pbip-semantic-ops/scripts/pbip_precheck.py `
      --path src/data_products/analytics/pbip `
      --output ops/telemetry/pbip_before.json
    ```

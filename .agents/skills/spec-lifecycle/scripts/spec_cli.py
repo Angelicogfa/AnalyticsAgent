@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import datetime as dt
 import json
+import os
 import re
 import shutil
 import sys
@@ -41,8 +42,30 @@ REQUIRED_SECTIONS = [
 ]
 
 
-def repo_root() -> Path:
+def resolve_workspace(workspace_arg: str = "") -> Path:
+    if workspace_arg:
+        return Path(workspace_arg).expanduser().resolve()
+    for env_key in ("ANALYTICS_AGENT_WORKSPACE", "CLAUDE_PROJECT_DIR"):
+        raw = os.environ.get(env_key, "").strip()
+        if raw:
+            return Path(raw).expanduser().resolve()
+    cwd = Path.cwd()
+    if any((cwd / marker).exists() for marker in ("specs", "contracts", "knowledge", "ops", ".git")):
+        return cwd
     return Path(__file__).resolve().parents[4]
+
+
+def resolve_asset(workspace: Path, rel_workspace: str, rel_plugin: str) -> Path:
+    candidates = [workspace / rel_workspace]
+    for env_key in ("PLUGIN_ROOT", "CLAUDE_PLUGIN_ROOT"):
+        raw = os.environ.get(env_key, "").strip()
+        if raw:
+            candidates.append(Path(raw) / rel_plugin)
+    candidates.append(Path(__file__).resolve().parents[4] / rel_workspace)
+    for c in candidates:
+        if c.exists():
+            return c
+    return candidates[0]
 
 
 def next_spec_number(root: Path) -> int:
@@ -58,8 +81,13 @@ def next_spec_number(root: Path) -> int:
 
 
 def cmd_create(args: argparse.Namespace) -> int:
-    root = repo_root()
-    template_path = root / "specs" / "templates" / TEMPLATE_MAP[args.type]
+    root = resolve_workspace(args.workspace)
+    tpl_name = TEMPLATE_MAP[args.type]
+    template_path = resolve_asset(
+        root,
+        f"specs/templates/{tpl_name}",
+        f"templates/specs/{tpl_name}",
+    )
     if not template_path.exists():
         print(f"Erro: template não encontrado em {template_path}", file=sys.stderr)
         return 1
@@ -90,6 +118,8 @@ def parse_status(text: str) -> str:
 
 def cmd_validate(args: argparse.Namespace) -> int:
     path = Path(args.spec)
+    if not path.is_absolute() and not path.exists():
+        path = resolve_workspace(args.workspace) / args.spec
     if not path.exists():
         print(f"Erro: SPEC não encontrada: {path}", file=sys.stderr)
         return 1
@@ -110,6 +140,8 @@ def cmd_validate(args: argparse.Namespace) -> int:
 
 def cmd_transition(args: argparse.Namespace) -> int:
     path = Path(args.spec)
+    if not path.is_absolute() and not path.exists():
+        path = resolve_workspace(args.workspace) / args.spec
     if not path.exists():
         print(f"Erro: SPEC não encontrada: {path}", file=sys.stderr)
         return 1
@@ -130,9 +162,9 @@ def cmd_transition(args: argparse.Namespace) -> int:
     # Permite avançar exatamente 1 passo ou retroceder para PLANNED em caso de rejeição
     allowed = (tgt_idx == cur_idx + 1) or (target == "PLANNED" and current in {"REVIEWED", "CRITIQUED"})
     if not allowed:
+        next_valid = STATES[cur_idx + 1] if cur_idx + 1 < len(STATES) else "NONE"
         print(
-            f"Erro: transição bloqueada ({current} -> {target}). "
-            f"Próximo passo válido: {STATES[cur_idx + 1] if cur_idx + 1 < len(STATES) else 'NONE'}",
+            f"Erro: transição bloqueada ({current} -> {target}). Próximo passo válido: {next_valid}",
             file=sys.stderr,
         )
         return 1
@@ -144,14 +176,17 @@ def cmd_transition(args: argparse.Namespace) -> int:
 
 
 def cmd_archive(args: argparse.Namespace) -> int:
-    root = repo_root()
+    root = resolve_workspace(args.workspace)
     path = Path(args.spec)
+    if not path.is_absolute() and not path.exists():
+        path = root / args.spec
     if not path.exists():
         print(f"Erro: SPEC não encontrada: {path}", file=sys.stderr)
         return 1
     status = parse_status(path.read_text(encoding="utf-8"))
     if status != "COMPLETED":
-        print(f"Erro: apenas SPECs com status COMPLETED podem ser arquivadas (atual: {status}).", file=sys.stderr)
+        msg = f"Erro: apenas SPECs com status COMPLETED podem ser arquivadas (atual: {status})."
+        print(msg, file=sys.stderr)
         return 1
     archive_dir = root / "specs" / "archive"
     archive_dir.mkdir(parents=True, exist_ok=True)
@@ -169,19 +204,23 @@ def main() -> int:
     p_create.add_argument("--type", choices=list(TEMPLATE_MAP.keys()), required=True)
     p_create.add_argument("--slug", required=True)
     p_create.add_argument("--clouds", default="multi-cloud")
+    p_create.add_argument("--workspace", default="", help="Raiz do workspace alvo")
     p_create.set_defaults(func=cmd_create)
 
     p_val = sub.add_parser("validate", help="Validar estrutura da SPEC")
     p_val.add_argument("--spec", required=True)
+    p_val.add_argument("--workspace", default="", help="Raiz do workspace alvo")
     p_val.set_defaults(func=cmd_validate)
 
     p_tr = sub.add_parser("transition", help="Avançar status da SPEC")
     p_tr.add_argument("--spec", required=True)
     p_tr.add_argument("--to", required=True)
+    p_tr.add_argument("--workspace", default="", help="Raiz do workspace alvo")
     p_tr.set_defaults(func=cmd_transition)
 
     p_arc = sub.add_parser("archive", help="Arquivar SPEC concluída")
     p_arc.add_argument("--spec", required=True)
+    p_arc.add_argument("--workspace", default="", help="Raiz do workspace alvo")
     p_arc.set_defaults(func=cmd_archive)
 
     args = parser.parse_args()

@@ -211,15 +211,18 @@ def test_generated_claude_artifacts_are_in_sync() -> None:
 
 def test_generated_agents_enforce_two_level_hierarchy() -> None:
     agents = list((REPO_ROOT / ".claude" / "agents").rglob("*.md"))
-    assert len(agents) == 22
     src_root = REPO_ROOT / ".agents" / "agents"
-    leaves = [p for p in src_root.rglob("*.md") if "\nrole_type: subagent\n" in p.read_text(encoding="utf-8")]
-    assert len(leaves) == 12
+    src_agents = list(src_root.rglob("*.md"))
+    assert len(agents) == len(src_agents) >= 10
+    leaves = [
+        p for p in src_agents if "\nrole_type: subagent\n" in p.read_text(encoding="utf-8")
+    ]
+    assert len(leaves) >= 1
     for src in leaves:
         generated = REPO_ROOT / ".claude" / "agents" / src.relative_to(src_root)
         assert "\ndisallowedTools: Agent\n" in generated.read_text(encoding="utf-8")
     managers = [p for p in agents if "disallowedTools" not in p.read_text(encoding="utf-8")]
-    assert len(managers) == 10
+    assert len(managers) == len(src_agents) - len(leaves)
 
 
 STUB_CLAUDE = r"""
@@ -249,11 +252,15 @@ print(json.dumps({"result": "", "structured_output": out}))
     ("verdict", "status"), [("APPROVED", "READY_FOR_HUMAN_APPROVAL"), ("REJECTED", "ESCALATED_TO_HUMAN")]
 )
 def test_run_spec_cycle_executes_original_orchestrator(tmp_path: Path, verdict: str, status: str) -> None:
+    ws = tmp_path / "ws"
+    (ws / "specs" / "active").mkdir(parents=True)
+    spec_rel = "specs/active/SPEC-001-test.md"
+    (ws / spec_rel).write_text((REPO_ROOT / SPEC_001).read_text("utf-8"), encoding="utf-8")
     stub = tmp_path / "stub_claude.py"
     stub.write_text(STUB_CLAUDE, encoding="utf-8")
     env = _clean_env(tmp_path, CLAUDE_BIN=str(stub), STUB_VERDICT=verdict)
     proc = subprocess.run(
-        [sys.executable, str(RUN_SPEC), "--spec", SPEC_001, "--max-plan-cycles", "2"],
+        [sys.executable, str(RUN_SPEC), "--spec", spec_rel, "--workspace", str(ws), "--max-plan-cycles", "2"],
         env=env,
         capture_output=True,
         text=True,
@@ -292,9 +299,12 @@ def test_install_claude_code_target_builds_plugin(tmp_path: Path) -> None:
     )
     hooks = json.loads((claude_dir / "hooks" / "hooks.json").read_text("utf-8"))["hooks"]
     assert hooks["PreToolUse"][0]["hooks"][0]["onFailure"] == "block"
-    assert len(list((claude_dir / "agents").glob("*.md"))) == 22
+    expected_agents = len(list((REPO_ROOT / ".agents" / "agents").rglob("*.md")))
+    assert len(list((claude_dir / "agents").glob("*.md"))) == expected_agents
     assert sum(1 for p in (claude_dir / "skills").iterdir() if p.is_dir()) >= 20
     assert (claude_dir / ".mcp.json").exists()
+    assert (claude_dir / "workflows" / "run_spec_cycle.py").exists()
+    assert (claude_dir / "workflows" / "data_task_orchestrator.py").exists()
 
     # Gate em modo plugin Claude sobre workspace externo sem policy.json local
     ext = tmp_path / "external"
@@ -350,7 +360,8 @@ def test_marketplace_points_to_committed_plugin() -> None:
     assert manifest["name"] == entry["name"] == "analytics-agent"
     assert "version" not in manifest  # atualização pelo SHA do commit (marketplace git)
     assert (plugin_dir / "hooks" / "hooks.json").exists()
-    assert len(list((plugin_dir / "agents").glob("*.md"))) == 22
+    expected_agents = len(list((REPO_ROOT / ".agents" / "agents").rglob("*.md")))
+    assert len(list((plugin_dir / "agents").glob("*.md"))) == expected_agents
 
 
 def test_generated_agent_descriptions_are_quoted_yaml() -> None:

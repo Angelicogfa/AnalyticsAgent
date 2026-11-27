@@ -6,6 +6,7 @@ Este template implementa defesa em profundidade para operações agênticas de d
 - **Zero Bypass de TLS (`RULE-05`):** É estritamente proibido desabilitar validação TLS (`verify=False`, `NODE_TLS_REJECT_UNAUTHORIZED=0`, `AZURE_CLI_DISABLE_CONNECTION_VERIFICATION`, `curl -k`).
 - **Guardrails Determinísticos:** O hook `PreToolUse` (`.agents/hooks/security_finops_gate.py`) bloqueia comandos destrutivos, vazamento de chaves/tokens, bypass de TLS e mutações MCP sem aprovação.
 - **Proteção de PII (LGPD):** Datasets reais com dados pessoais nunca devem ser commitados no Git, gravados em `knowledge/` ou impressos em logs/prompts.
+- **Cadeia de Suprimentos (MCPs e Plugins):** Novos servidores MCP ou alterações de versão em `.agents/plugins/multicloud-mcp-connectors/mcp_config.json` devem usar versões pinadas e passar por revisão humana. Para ambientes corporativos, defina `ANALYTICS_AGENT_REPO_URL` e `ANALYTICS_AGENT_REPO_REF` (tag ou SHA aprovado) ao executar `analytics-agent-warmup`.
 
 ## Reportando Vulnerabilidades
 Caso identifique uma falha de segurança, bypass de hook ou exposição acidental:

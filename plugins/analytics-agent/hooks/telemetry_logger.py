@@ -68,7 +68,7 @@ def main() -> None:
         error = payload.get("error", "")
 
         record = {
-            "timestampUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
+            "timestampUtc": dt.datetime.now(dt.UTC).isoformat(),
             "eventType": "POST_TOOL_USE",
             "conversationId": payload.get("conversationId", ""),
             "stepIdx": payload.get("stepIdx"),
@@ -82,8 +82,8 @@ def main() -> None:
 
         with events_path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(record, ensure_ascii=False) + "\n")
-    except Exception:
-        pass
+    except Exception as exc:  # telemetria nunca bloqueia a ferramenta
+        sys.stderr.write(f"[telemetry_logger] falha ao registrar evento: {exc}\n")
 
     sys.stdout.write("{}")
 

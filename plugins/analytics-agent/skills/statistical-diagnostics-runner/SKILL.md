@@ -13,7 +13,7 @@ Garante determinismo estatístico antes de treinar qualquer modelo ou executar i
 
 ## Execução Determinística (`scripts/run_diagnostics.py`)
 ```powershell
-uv run .agents/skills/statistical-diagnostics-runner/scripts/run_diagnostics.py `
+uv run ${CLAUDE_PLUGIN_ROOT}/skills/statistical-diagnostics-runner/scripts/run_diagnostics.py `
   --train-csv data/processed/train.csv `
   --oot-csv data/processed/oot.csv `
   --target-col churn_60d `

@@ -72,14 +72,14 @@ def compute_psi(base: list[float], actual: list[float], bins: int = 10) -> float
 
     p_base = bucket_props(base)
     p_act = bucket_props(actual)
-    return round(sum((a - b) * math.log(a / b) for b, a in zip(p_base, p_act)), 4)
+    return round(sum((a - b) * math.log(a / b) for b, a in zip(p_base, p_act, strict=True)), 4)
 
 
 def pearson(x: list[float], y: list[float]) -> float | None:
     if len(x) != len(y) or len(x) < 3:
         return None
     mx, my = statistics.fmean(x), statistics.fmean(y)
-    num = sum((a - mx) * (b - my) for a, b in zip(x, y))
+    num = sum((a - mx) * (b - my) for a, b in zip(x, y, strict=True))
     dx = math.sqrt(sum((a - mx) ** 2 for a in x))
     dy = math.sqrt(sum((b - my) ** 2 for b in y))
     if dx == 0 or dy == 0:
@@ -175,11 +175,11 @@ def main() -> int:
             if args.prob_col and args.prob_col in train_data:
                 p_vals, _ = to_floats(train_data[args.prob_col])
                 if len(p_vals) == len(t_vals):
-                    brier = statistics.fmean((p - y) ** 2 for p, y in zip(p_vals, t_vals))
+                    brier = statistics.fmean((p - y) ** 2 for p, y in zip(p_vals, t_vals, strict=True))
                     target_summary["brierScore"] = round(brier, 5)
 
     report = {
-        "generatedAtUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "generatedAtUtc": dt.datetime.now(dt.UTC).isoformat(),
         "trainRows": n_rows,
         "columns": col_reports,
         "highCollinearityPairs": high_corr,

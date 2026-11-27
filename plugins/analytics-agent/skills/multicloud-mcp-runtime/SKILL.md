@@ -16,12 +16,12 @@ Garante que o ambiente local esteja pronto para operar **Microsoft Fabric** (`fa
 Execute o diagnóstico completo (100% somente leitura, saída estruturada em arquivo):
 
 ```powershell
-uv run .agents/skills/multicloud-mcp-runtime/scripts/verify_mcp_env.py --output ops/telemetry/mcp_env_check.json
+uv run ${CLAUDE_PLUGIN_ROOT}/skills/multicloud-mcp-runtime/scripts/verify_mcp_env.py --output ops/telemetry/mcp_env_check.json
 ```
 
 Para incluir o *probe* JSON-RPC (`initialize` + `tools/list` via stdio) contra o `aws-mcp`:
 ```powershell
-uv run .agents/skills/multicloud-mcp-runtime/scripts/verify_mcp_env.py --probe-aws-mcp --output ops/telemetry/mcp_env_check.json
+uv run ${CLAUDE_PLUGIN_ROOT}/skills/multicloud-mcp-runtime/scripts/verify_mcp_env.py --probe-aws-mcp --output ops/telemetry/mcp_env_check.json
 ```
 
 ## Checklist Operacional Rápido

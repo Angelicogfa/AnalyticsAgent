@@ -156,7 +156,7 @@ def main() -> int:
     args = parser.parse_args()
 
     report: dict = {
-        "generatedAtUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "generatedAtUtc": dt.datetime.now(dt.UTC).isoformat(),
         "pythonRuntime": check_python_version(),
         "tlsCompliance": check_tls_env(),
         "binaries": {

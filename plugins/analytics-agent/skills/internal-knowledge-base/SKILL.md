@@ -15,23 +15,23 @@ Permite que todos os agentes consumam o conhecimento proprietário/curado da equ
 
 ### 1. Reconstruir índice FTS5 e detectar PDFs pendentes de fichamento
 ```powershell
-uv run .agents/skills/internal-knowledge-base/scripts/knowledge_cli.py index --output ops/telemetry/kb_index_report.json
+uv run ${CLAUDE_PLUGIN_ROOT}/skills/internal-knowledge-base/scripts/knowledge_cli.py index --output ops/telemetry/kb_index_report.json
 ```
 
 ### 2. Buscar conhecimento relevante por tópico e domínio (antes da busca web!)
 ```powershell
-uv run .agents/skills/internal-knowledge-base/scripts/knowledge_cli.py search --query "validacao out-of-time calibracao" --domain data-science --limit 5 --output ops/telemetry/kb_search.json
+uv run ${CLAUDE_PLUGIN_ROOT}/skills/internal-knowledge-base/scripts/knowledge_cli.py search --query "validacao out-of-time calibracao" --domain data-science --limit 5 --output ops/telemetry/kb_search.json
 ```
 *(O argumento `--domain` é opcional; omita para buscar em todos os domínios.)*
 
 ### 3. Listar status do catálogo e PDFs pendentes em `knowledge/inbox/`
 ```powershell
-uv run .agents/skills/internal-knowledge-base/scripts/knowledge_cli.py status --output ops/telemetry/kb_status.json
+uv run ${CLAUDE_PLUGIN_ROOT}/skills/internal-knowledge-base/scripts/knowledge_cli.py status --output ops/telemetry/kb_status.json
 ```
 
 ### 4. Registrar nova nota destilada no catálogo (`knowledge/catalog.json`)
 ```powershell
-uv run .agents/skills/internal-knowledge-base/scripts/knowledge_cli.py register --kb-id KB-002 --title "Titulo do PDF" --domain data-science --source-file "knowledge/data-science/meu-arquivo.pdf" --note-file "knowledge/data-science/KB-002-meu-arquivo.md" --tags "series-temporais,sazonalidade"
+uv run ${CLAUDE_PLUGIN_ROOT}/skills/internal-knowledge-base/scripts/knowledge_cli.py register --kb-id KB-002 --title "Titulo do PDF" --domain data-science --source-file "knowledge/data-science/meu-arquivo.pdf" --note-file "knowledge/data-science/KB-002-meu-arquivo.md" --tags "series-temporais,sazonalidade"
 ```
 
 ## Protocolo para Destilar um Novo PDF Depositado pelo Usuário

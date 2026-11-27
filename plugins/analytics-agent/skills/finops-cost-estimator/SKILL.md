@@ -12,7 +12,7 @@ description: >-
 Nunca estime custos de nuvem ou LLM "de cabeça". Execute:
 
 ```powershell
-uv run .agents/skills/finops-cost-estimator/scripts/estimate_finops.py `
+uv run ${CLAUDE_PLUGIN_ROOT}/skills/finops-cost-estimator/scripts/estimate_finops.py `
   --athena-scan-gb 25 `
   --aws-egress-gb 10 `
   --s3-shortcut-cache true `

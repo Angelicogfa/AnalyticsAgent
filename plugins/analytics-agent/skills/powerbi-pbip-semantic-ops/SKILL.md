@@ -27,7 +27,7 @@ Nenhum modelo semântico pode avançar para `VERIFIED` ou sincronizar com o Micr
 
 1. **Pré-Check Determinístico Local (sempre obrigatório — CLI `scripts/pbip_precheck.py`):**
    ```powershell
-   uv run .agents/skills/powerbi-pbip-semantic-ops/scripts/pbip_precheck.py --path src/data_products/analytics/pbip --output ops/telemetry/pbip_precheck_report.json
+   uv run ${CLAUDE_PLUGIN_ROOT}/skills/powerbi-pbip-semantic-ops/scripts/pbip_precheck.py --path src/data_products/analytics/pbip --output ops/telemetry/pbip_precheck_report.json
    ```
    Valida: ausência de `.pbix` binários, formato TMDL (não `model.bim` legado), PBIR JSON válido, ausência de Auto Date/Time (`LocalDateTable_*`), relacionamentos bidirecionais não justificados, antipadrões DAX (`FILTER(ALL(...))` / iteradores sobre tabelas inteiras), medidas sem `description`/`formatString` e invoca automaticamente o **Tabular Editor BPA CLI** se disponível (`--bpa-rules <BPARules.json>`).
 2. **Best Practice Analyzer (Tabular Editor CLI):**

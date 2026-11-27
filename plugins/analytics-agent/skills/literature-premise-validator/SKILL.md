@@ -15,7 +15,7 @@ Assegurar que toda decisão analítica, estatística ou de engenharia de dados n
 1. **Enquadramento do Problema e Natureza dos Dados:**
    - Identifique o tipo de processo gerador de dados: transversal (*cross-sectional*), painel/longitudinal, série temporal, sobrevivência/censurado, contagem/zero-inflated, classificação desbalanceada, experimento A/B ou pipeline transacional/CDC.
 2. **Consulta Prioritária à Base Interna (`knowledge/`):**
-   - Execute `uv run .agents/skills/internal-knowledge-base/scripts/knowledge_cli.py search --query "<termos>" --limit 5 --output ops/telemetry/kb_search.json` para incorporar dinâmicas, processos e premissas dos PDFs curados pela equipe (`KB-NNN`).
+   - Execute `uv run ${CLAUDE_PLUGIN_ROOT}/skills/internal-knowledge-base/scripts/knowledge_cli.py search --query "<termos>" --limit 5 --output ops/telemetry/kb_search.json` para incorporar dinâmicas, processos e premissas dos PDFs curados pela equipe (`KB-NNN`).
 3. **Busca Complementar de Referências (Web / Literatura):**
    - Pesquise fontes primárias via `search_web` (e, quando aplicável, arXiv, EuropePMC, documentação oficial Microsoft Fabric / AWS / scikit-learn / statsmodels).
    - Registre no mínimo **2–3 referências verificáveis** (título, autor/instituição, ano, URL ou `KB-NNN` e implicação prática para a SPEC).

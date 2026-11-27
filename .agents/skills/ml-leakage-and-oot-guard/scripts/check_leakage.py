@@ -103,7 +103,7 @@ def main() -> int:
     blockers = sum(1 for f in findings if f["severity"] == "BLOCKER")
     majors = sum(1 for f in findings if f["severity"] == "MAJOR")
     report = {
-        "generatedAtUtc": dt.datetime.now(dt.timezone.utc).isoformat(),
+        "generatedAtUtc": dt.datetime.now(dt.UTC).isoformat(),
         "scannedPath": str(target),
         "filesScanned": len(py_files),
         "passed": blockers == 0,
