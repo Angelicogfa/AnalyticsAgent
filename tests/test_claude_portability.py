@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -337,3 +338,36 @@ def test_install_claude_code_refuses_foreign_nonempty_dir(tmp_path: Path) -> Non
     )
     assert proc.returncode != 0
     assert (foreign / "keep.txt").exists()
+
+
+def test_marketplace_points_to_committed_plugin() -> None:
+    marketplace = json.loads((REPO_ROOT / ".claude-plugin" / "marketplace.json").read_text("utf-8"))
+    assert marketplace["owner"]["name"]
+    (entry,) = marketplace["plugins"]
+    assert entry["source"].startswith("./")
+    plugin_dir = REPO_ROOT / entry["source"]
+    manifest = json.loads((plugin_dir / ".claude-plugin" / "plugin.json").read_text("utf-8"))
+    assert manifest["name"] == entry["name"] == "analytics-agent"
+    assert "version" not in manifest  # atualização pelo SHA do commit (marketplace git)
+    assert (plugin_dir / "hooks" / "hooks.json").exists()
+    assert len(list((plugin_dir / "agents").glob("*.md"))) == 22
+
+
+def test_generated_agent_descriptions_are_quoted_yaml() -> None:
+    for agent in (REPO_ROOT / ".claude" / "agents").rglob("*.md"):
+        line = next(ln for ln in agent.read_text("utf-8").splitlines() if ln.startswith("description: "))
+        assert json.loads(line.removeprefix("description: ")), agent.name
+
+
+@pytest.mark.skipif(shutil.which("claude") is None, reason="CLI `claude` indisponível")
+@pytest.mark.parametrize("target", [".", "plugins/analytics-agent", ".claude"])
+def test_claude_cli_validates_plugin_and_marketplace(target: str) -> None:
+    proc = subprocess.run(
+        [shutil.which("claude") or "claude", "plugin", "validate", target],
+        cwd=REPO_ROOT,
+        capture_output=True,
+        text=True,
+        encoding="utf-8",
+        check=False,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr

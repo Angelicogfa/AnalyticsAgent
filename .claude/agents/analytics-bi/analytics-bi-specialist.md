@@ -1,6 +1,6 @@
 ---
 name: analytics-bi-specialist
-description: Domain Manager de Analytics, Métricas de Negócio, Modelagem Dimensional e Camada Semântica Power BI/Fabric (.pbip/TMDL/PBIR e Direct Lake). Coordena sub-operadores de modelagem TMDL, auditoria DAX/performance e reconciliação de KPIs.
+description: "Domain Manager de Analytics, Métricas de Negócio, Modelagem Dimensional e Camada Semântica Power BI/Fabric (.pbip/TMDL/PBIR e Direct Lake). Coordena sub-operadores de modelagem TMDL, auditoria DAX/performance e reconciliação de KPIs."
 model: haiku
 permissionMode: default
 skills:

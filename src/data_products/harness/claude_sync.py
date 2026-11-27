@@ -3,6 +3,7 @@
 Gera, sem alterar nada consumido pelo Antigravity:
   - `.claude/skills/<skill>/SKILL.md`   (cópia fiel dos SKILL.md de `.agents/skills/`)
   - `.claude/agents/<dominio>/<nome>.md` (frontmatter traduzido para campos do Claude Code)
+  - `.claude-plugin/marketplace.json` + `plugins/analytics-agent/` (marketplace e plugin Claude Code)
   - `.mcp.json` (a partir de `.agents/plugins/multicloud-mcp-connectors/mcp_config.json`)
 
 Uso:
@@ -13,12 +14,16 @@ Uso:
 from __future__ import annotations
 
 import json
+import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
 
 GENERATED_MARKER = "<!-- GERADO por `warmup.py sync-claude` a partir de {source} — NÃO EDITE. -->"
 MCP_SOURCE = Path(".agents/plugins/multicloud-mcp-connectors/mcp_config.json")
 MODEL_MAP_PATH = Path(".claude/model_map.json")
+PLUGIN_REL = Path("plugins/analytics-agent")
+MARKETPLACE_REL = Path(".claude-plugin/marketplace.json")
+MARKETPLACE_NAME = "analytics-agent-marketplace"
 
 DEFAULT_MODEL_MAP: dict[str, dict[str, str]] = {
     "gemini4": {"Carbon": "opus", "Neon": "sonnet", "Hydrogen": "haiku", "Argon": "sonnet"},
@@ -86,7 +91,9 @@ def translate_model(meta: dict[str, object], model_map: dict[str, dict[str, str]
 def render_agent(
     meta: dict[str, object], body: str, source_rel: str, model_map: dict[str, dict[str, str]]
 ) -> str:
-    out = ["---", f"name: {meta['name']}", f"description: {meta['description']}"]
+    # description entre aspas (JSON é YAML válido): evita quebra com ": " no texto.
+    description = str(meta["description"]).strip().strip('"')
+    out = ["---", f"name: {meta['name']}", f"description: {json.dumps(description, ensure_ascii=False)}"]
     out.append(f"model: {translate_model(meta, model_map)}")
 
     is_leaf = meta.get("role_type") == "subagent"
@@ -137,7 +144,55 @@ def build(root: Path) -> SyncResult:
     if mcp_src.exists():
         data = json.loads(mcp_src.read_text(encoding="utf-8"))
         result.add(Path(".mcp.json"), json.dumps({"mcpServers": data.get("mcpServers", {})}, indent=2) + "\n")
+
+    # Marketplace do próprio repositório (Claude Code: `claude plugin marketplace add <repo>`)
+    marketplace = {
+        "name": MARKETPLACE_NAME,
+        "owner": {"name": "AnalyticsAgent Contributors"},
+        "description": (
+            "Harness agêntico multi-cloud (Fabric + AWS) para produtos de dados — "
+            "fonte única com o Antigravity."
+        ),
+        "plugins": [{"name": "analytics-agent", "source": f"./{PLUGIN_REL.as_posix()}"}],
+    }
+    result.add(MARKETPLACE_REL, json.dumps(marketplace, ensure_ascii=False, indent=2) + "\n")
     return result
+
+
+def _read_normalized(path: Path) -> str | bytes:
+    try:
+        return path.read_text(encoding="utf-8")
+    except UnicodeDecodeError:
+        return path.read_bytes()
+
+
+def _tree(base: Path) -> dict[str, str | bytes]:
+    if not base.exists():
+        return {}
+    return {
+        p.relative_to(base).as_posix(): _read_normalized(p)
+        for p in sorted(base.rglob("*"))
+        if p.is_file() and "__pycache__" not in p.parts
+    }
+
+
+def build_plugin(root: Path, target: Path) -> None:
+    """Monta o bundle de plugin Claude Code (o mesmo de `install --target claude-code`)."""
+    from data_products.harness.warmup import assemble_claude_plugin
+
+    assemble_claude_plugin(root, target, include_mcp=True)
+
+
+def plugin_drift(root: Path) -> list[str]:
+    with tempfile.TemporaryDirectory() as tmp:
+        expected_dir = Path(tmp) / "analytics-agent"
+        build_plugin(root, expected_dir)
+        expected, actual = _tree(expected_dir), _tree(root / PLUGIN_REL)
+    prefix = PLUGIN_REL.as_posix()
+    drift = [f"ausente: {prefix}/{k}" for k in expected if k not in actual]
+    drift += [f"divergente: {prefix}/{k}" for k in expected if k in actual and actual[k] != expected[k]]
+    drift += [f"órfão: {prefix}/{k}" for k in actual if k not in expected]
+    return drift
 
 
 def managed_dirs() -> list[Path]:
@@ -178,9 +233,11 @@ def write(root: Path, result: SyncResult) -> int:
 def run(root: Path, check: bool) -> int:
     result = build(root)
     if check:
-        drift = find_drift(root, result)
+        drift = sorted(find_drift(root, result) + plugin_drift(root))
         print(json.dumps({"inSync": not drift, "drift": drift}, ensure_ascii=False, indent=2))
         return 1 if drift else 0
     count = write(root, result)
+    build_plugin(root, root / PLUGIN_REL)
+    count += len(_tree(root / PLUGIN_REL))
     print(json.dumps({"generatedFiles": count}, ensure_ascii=False))
     return 0

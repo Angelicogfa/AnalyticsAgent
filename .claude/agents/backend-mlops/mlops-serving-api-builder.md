@@ -1,6 +1,6 @@
 ---
 name: mlops-serving-api-builder
-description: Sub-operador de Backend & MLOps especializado na construção de APIs tipadas de inferência (FastAPI/Pydantic/OpenAPI), jobs de Batch Scoring (Fabric Spark PREDICT / AWS SageMaker Batch), healthchecks e testes de contrato em sandbox. Reporta ao manager backend-mlops-specialist.
+description: "Sub-operador de Backend & MLOps especializado na construção de APIs tipadas de inferência (FastAPI/Pydantic/OpenAPI), jobs de Batch Scoring (Fabric Spark PREDICT / AWS SageMaker Batch), healthchecks e testes de contrato em sandbox. Reporta ao manager backend-mlops-specialist."
 model: sonnet
 permissionMode: default
 disallowedTools: Agent

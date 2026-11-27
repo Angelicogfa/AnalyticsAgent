@@ -1,6 +1,6 @@
 ---
 name: planner-architect
-description: Arquiteto e planejador multi-cloud (Microsoft Fabric e AWS). Converte SPECs e pareceres de literatura em planos executáveis em DAG com estimativas de FinOps, contratos de dados e plano de testes/rollback.
+description: "Arquiteto e planejador multi-cloud (Microsoft Fabric e AWS). Converte SPECs e pareceres de literatura em planos executáveis em DAG com estimativas de FinOps, contratos de dados e plano de testes/rollback."
 model: sonnet
 permissionMode: plan
 skills:

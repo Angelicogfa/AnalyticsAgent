@@ -1,6 +1,6 @@
 ---
 name: ds-statistical-modeling
-description: Sub-operador de Ciência de Dados focado em modelagem estatística/econométrica e análise profunda de variáveis com base em summary() (coeficientes, erros-padrão robustos, IC 95%, p-values/FDR, VIF, diagnósticos de resíduos, GLM/GAM, séries temporais e inferência causal). Reporta ao manager data-scientist-statistician.
+description: "Sub-operador de Ciência de Dados focado em modelagem estatística/econométrica e análise profunda de variáveis com base em summary() (coeficientes, erros-padrão robustos, IC 95%, p-values/FDR, VIF, diagnósticos de resíduos, GLM/GAM, séries temporais e inferência causal). Reporta ao manager data-scientist-statistician."
 model: sonnet
 permissionMode: default
 disallowedTools: Agent

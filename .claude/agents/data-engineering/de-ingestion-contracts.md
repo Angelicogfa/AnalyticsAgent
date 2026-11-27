@@ -1,6 +1,6 @@
 ---
 name: de-ingestion-contracts
-description: Sub-operador de Engenharia de Dados focado em descoberta via MCP (fabric-mcp-server / aws-mcp), ingestão incremental, mascaramento PII e contratos ODCS v3.x. Reporta ao manager data-engineer.
+description: "Sub-operador de Engenharia de Dados focado em descoberta via MCP (fabric-mcp-server / aws-mcp), ingestão incremental, mascaramento PII e contratos ODCS v3.x. Reporta ao manager data-engineer."
 model: haiku
 permissionMode: default
 disallowedTools: Agent

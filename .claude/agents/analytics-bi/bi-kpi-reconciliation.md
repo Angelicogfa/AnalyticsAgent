@@ -1,6 +1,6 @@
 ---
 name: bi-kpi-reconciliation
-description: Sub-operador de Analytics & BI especializado em especificação matemática de KPIs e reconciliação numérica determinística Gold vs. Silver via SQL Endpoints do Fabric (Python 3.12) e Athena. Reporta ao manager analytics-bi-specialist.
+description: "Sub-operador de Analytics & BI especializado em especificação matemática de KPIs e reconciliação numérica determinística Gold vs. Silver via SQL Endpoints do Fabric (Python 3.12) e Athena. Reporta ao manager analytics-bi-specialist."
 model: haiku
 permissionMode: default
 disallowedTools: Agent

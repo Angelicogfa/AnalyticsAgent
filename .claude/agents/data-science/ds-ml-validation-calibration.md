@@ -1,6 +1,6 @@
 ---
 name: ds-ml-validation-calibration
-description: Sub-operador de Ciência de Dados especializado em comparação baseline vs. modelos candidatos, validação Out-of-Time (OOT), métricas sob desbalanceamento (PR-AUC, Lift), calibração de probabilidades (Brier/ECE/Platt/Isotonic) e análise de erro/fairness. Reporta ao manager data-scientist-statistician.
+description: "Sub-operador de Ciência de Dados especializado em comparação baseline vs. modelos candidatos, validação Out-of-Time (OOT), métricas sob desbalanceamento (PR-AUC, Lift), calibração de probabilidades (Brier/ECE/Platt/Isotonic) e análise de erro/fairness. Reporta ao manager data-scientist-statistician."
 model: sonnet
 permissionMode: default
 disallowedTools: Agent

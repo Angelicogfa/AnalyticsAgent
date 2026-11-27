@@ -1,6 +1,6 @@
 ---
 name: orchestrator
-description: Coordenador central Hub-and-Spoke da rede agêntica de dados. Gerencia o ciclo de vida das SPECs, roteia trabalho entre agentes especializados respeitando o model tiering e impõe circuit breakers.
+description: "Coordenador central Hub-and-Spoke da rede agêntica de dados. Gerencia o ciclo de vida das SPECs, roteia trabalho entre agentes especializados respeitando o model tiering e impõe circuit breakers."
 model: sonnet
 permissionMode: default
 skills:

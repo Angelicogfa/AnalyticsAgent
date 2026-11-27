@@ -1,6 +1,6 @@
 ---
 name: plan-reviewer-critic
-description: Revisor técnico e crítico adversarial (Red Team) de planos de dados. Identifica falhas de arquitetura, armadilhas de custo multi-cloud, data leakage, violações estatísticas e edge cases antes da execução.
+description: "Revisor técnico e crítico adversarial (Red Team) de planos de dados. Identifica falhas de arquitetura, armadilhas de custo multi-cloud, data leakage, violações estatísticas e edge cases antes da execução."
 model: opus
 permissionMode: plan
 skills:

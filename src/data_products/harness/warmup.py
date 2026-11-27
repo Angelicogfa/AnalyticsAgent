@@ -215,10 +215,11 @@ def assemble_claude_plugin(source_root: Path, target_dir: Path, include_mcp: boo
             "Rede cooperativa de 22 agentes, 20 skills, regras P0/FinOps, hooks determinísticos e MCPs "
             "para Microsoft Fabric, AWS e Power BI PBIP (mesma fonte do plugin Antigravity)."
         ),
-        "version": PLUGIN_VERSION,
+        "author": {"name": "AnalyticsAgent Contributors"},
         "homepage": REPO_HOMEPAGE,
         "repository": REPO_HOMEPAGE,
     }
+    # Sem "version": em marketplace git o Claude Code usa o SHA do commit (atualiza a cada push).
     (target_dir / ".claude-plugin" / "plugin.json").write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
@@ -234,15 +235,13 @@ def assemble_claude_plugin(source_root: Path, target_dir: Path, include_mcp: boo
             agent_count += 1
 
     # Skills completas (SKILL.md + scripts/references)
-    shutil.copytree(agents_src / "skills", target_dir / "skills")
+    no_cache = shutil.ignore_patterns("__pycache__", "*.pyc")
+    shutil.copytree(agents_src / "skills", target_dir / "skills", ignore=no_cache)
     skill_count = sum(1 for p in (target_dir / "skills").iterdir() if p.is_dir())
 
     # Hooks originais + adaptadores Claude + política empacotada
-    shutil.copytree(agents_src / "hooks", target_dir / "hooks")
-    claude_hooks_src = source_root / ".claude" / "hooks"
-    shutil.copytree(
-        claude_hooks_src, target_dir / "claude_hooks", ignore=shutil.ignore_patterns("__pycache__")
-    )
+    shutil.copytree(agents_src / "hooks", target_dir / "hooks", ignore=no_cache)
+    shutil.copytree(source_root / ".claude" / "hooks", target_dir / "claude_hooks", ignore=no_cache)
     policy_src = source_root / "ops" / "governance" / "policy.json"
     if policy_src.exists():
         (target_dir / "ops" / "governance").mkdir(parents=True, exist_ok=True)
@@ -274,13 +273,11 @@ def assemble_claude_plugin(source_root: Path, target_dir: Path, include_mcp: boo
         json.dumps(hooks_json, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
     )
 
-    # Regras consolidadas (mesmo conteúdo do plugin Antigravity) + templates
-    (target_dir / "rules").mkdir(parents=True, exist_ok=True)
-    (target_dir / "rules" / "AGENTS.md").write_text(build_consolidated_rules(source_root), encoding="utf-8")
+    # Templates para init-workspace (regras P0 não são carregadas por plugins do Claude Code; ver README)
     for tpl_rel in ("specs/templates", "contracts/templates", "knowledge/templates"):
         src_tpl = source_root / tpl_rel
         if src_tpl.exists():
-            shutil.copytree(src_tpl, target_dir / "templates" / tpl_rel.split("/")[0])
+            shutil.copytree(src_tpl, target_dir / "templates" / tpl_rel.split("/")[0], ignore=no_cache)
 
     mcp_servers: list[str] = []
     mcp_rel = Path(".mcp.json")

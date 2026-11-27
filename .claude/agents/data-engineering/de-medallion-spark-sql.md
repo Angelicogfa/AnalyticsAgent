@@ -1,6 +1,6 @@
 ---
 name: de-medallion-spark-sql
-description: Sub-operador de Engenharia de Dados focado em transformações idempotentes Medallion (Bronze -> Silver -> Gold) em PySpark/Delta V-Order (Fabric) e Glue/Iceberg/Athena (AWS) no padrão src-layout. Reporta ao manager data-engineer.
+description: "Sub-operador de Engenharia de Dados focado em transformações idempotentes Medallion (Bronze -> Silver -> Gold) em PySpark/Delta V-Order (Fabric) e Glue/Iceberg/Athena (AWS) no padrão src-layout. Reporta ao manager data-engineer."
 model: haiku
 permissionMode: default
 disallowedTools: Agent

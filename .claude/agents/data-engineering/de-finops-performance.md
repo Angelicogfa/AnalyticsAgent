@@ -1,6 +1,6 @@
 ---
 name: de-finops-performance
-description: Sub-operador de Engenharia de Dados focado em FinOps e performance multi-cloud: particionamento, compactação de small files, OneLake S3 Shortcut Cache, EXPLAIN Athena e otimização de Fabric CUs. Reporta ao manager data-engineer.
+description: "Sub-operador de Engenharia de Dados focado em FinOps e performance multi-cloud: particionamento, compactação de small files, OneLake S3 Shortcut Cache, EXPLAIN Athena e otimização de Fabric CUs. Reporta ao manager data-engineer."
 model: sonnet
 permissionMode: plan
 disallowedTools: Agent

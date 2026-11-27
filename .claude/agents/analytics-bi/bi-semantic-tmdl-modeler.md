@@ -1,6 +1,6 @@
 ---
 name: bi-semantic-tmdl-modeler
-description: Sub-operador de Analytics & BI especializado em modelagem dimensional Star Schema, versionamento .pbip/TMDL/PBIR, operação via powerbi-modeling-mcp e refatoração em lote de arquivos .tmdl. Reporta ao manager analytics-bi-specialist.
+description: "Sub-operador de Analytics & BI especializado em modelagem dimensional Star Schema, versionamento .pbip/TMDL/PBIR, operação via powerbi-modeling-mcp e refatoração em lote de arquivos .tmdl. Reporta ao manager analytics-bi-specialist."
 model: haiku
 permissionMode: default
 disallowedTools: Agent

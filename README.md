@@ -257,13 +257,22 @@ python .claude/workflows/run_spec_cycle.py --spec specs/active/SPEC-001-exemplo-
 ```
 Ferramentas liberadas por fase ficam em `.claude/workflows/claude_runtime.json`. As tarefas executam em sequência.
 
-### Plugin global (qualquer projeto)
+### Plugin global via marketplace (qualquer projeto)
+O próprio repositório é um **marketplace de plugins do Claude Code** (`.claude-plugin/marketplace.json` → `plugins/analytics-agent/`). Marketplace próprio não exige publicação nem aprovação da Anthropic; na organização, siga a política de plugins/conectores aprovados pelo administrador.
+
 ```powershell
-uv run scripts/warmup.py install --target claude-code   # padrão continua sendo --target antigravity
-claude --plugin-dir "$HOME/.analytics-agent/claude-code-plugin"
+claude plugin marketplace add Angelicogfa/AnalyticsAgent
+claude plugin install analytics-agent@analytics-agent-marketplace
 ```
+Dentro de uma sessão: `/plugin install analytics-agent --marketplace Angelicogfa/AnalyticsAgent` (Claude Code 2.1.275+).
+
+- **Atualização:** `claude plugin update analytics-agent@analytics-agent-marketplace` (auto-update vem desligado em marketplaces de terceiros). O `plugin.json` não fixa `version`: cada commit publicado é uma nova versão (SHA).
+- **Administradores:** podem registrar e forçar o plugin via `extraKnownMarketplaces` + `enabledPlugins` nas configurações gerenciadas — necessário para os hooks rodarem quando `allowManagedHooksOnly` estiver ativo.
+- `plugins/analytics-agent/` é **gerado** por `sync-claude` (o CI falha se divergir); não edite manualmente.
+- Sem marketplace (desenvolvimento): `uv run scripts/warmup.py install --target claude-code` e `claude --plugin-dir "$HOME/.analytics-agent/claude-code-plugin"`.
 
 ### Limites conhecidos
 - A equivalência garantida é a da camada determinística (gate, política, ciclo, schemas, scripts); respostas de Gemini e Claude diferem.
-- No modo plugin, as regras P0 não são carregadas como `CLAUDE.md` (o hook de SessionStart injeta apenas o lembrete do ciclo); no modo projeto o `CLAUDE.md` cobre isso.
+- No modo plugin, as regras P0 não são carregadas como `CLAUDE.md` (o hook de SessionStart injeta apenas o lembrete do ciclo) e o `permissionMode` dos agentes é ignorado; no modo projeto o `CLAUDE.md` e o `permissionMode` valem.
+- As skills citam scripts em `.agents/skills/...`; em workspaces externos (modo plugin) esses caminhos não existem — mesma limitação do modo plugin do Antigravity.
 - Claude Desktop em modo chat não suporta hooks nem subagentes locais.

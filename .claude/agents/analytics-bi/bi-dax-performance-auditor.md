@@ -1,6 +1,6 @@
 ---
 name: bi-dax-performance-auditor
-description: Sub-operador de Analytics & BI especializado em auditoria de DAX e pré-checks de performance Power BI (pbip_precheck.py, Tabular Editor BPA, VertiPaq Analyzer, DAX Studio SE vs FE e guardrails Direct Lake). Reporta ao manager analytics-bi-specialist.
+description: "Sub-operador de Analytics & BI especializado em auditoria de DAX e pré-checks de performance Power BI (pbip_precheck.py, Tabular Editor BPA, VertiPaq Analyzer, DAX Studio SE vs FE e guardrails Direct Lake). Reporta ao manager analytics-bi-specialist."
 model: sonnet
 permissionMode: plan
 disallowedTools: Agent

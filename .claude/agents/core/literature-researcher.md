@@ -1,6 +1,6 @@
 ---
 name: literature-researcher
-description: Pesquisador científico e técnico com busca na web. Fundamenta metodologias estatísticas, de ciência de dados, engenharia e arquitetura com referências verificáveis e define matriz de premissas e testes diagnósticos obrigatórios.
+description: "Pesquisador científico e técnico com busca na web. Fundamenta metodologias estatísticas, de ciência de dados, engenharia e arquitetura com referências verificáveis e define matriz de premissas e testes diagnósticos obrigatórios."
 model: haiku
 permissionMode: plan
 skills:

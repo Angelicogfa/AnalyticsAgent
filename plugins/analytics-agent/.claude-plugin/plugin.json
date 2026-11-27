@@ -1,0 +1,9 @@
+{
+  "name": "analytics-agent",
+  "description": "Rede cooperativa de 22 agentes, 20 skills, regras P0/FinOps, hooks determinísticos e MCPs para Microsoft Fabric, AWS e Power BI PBIP (mesma fonte do plugin Antigravity).",
+  "author": {
+    "name": "AnalyticsAgent Contributors"
+  },
+  "homepage": "https://github.com/Angelicogfa/AnalyticsAgent",
+  "repository": "https://github.com/Angelicogfa/AnalyticsAgent"
+}

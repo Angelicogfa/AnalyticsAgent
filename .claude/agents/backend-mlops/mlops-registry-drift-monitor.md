@@ -1,6 +1,6 @@
 ---
 name: mlops-registry-drift-monitor
-description: Sub-operador de Backend & MLOps especializado em Model Registry (MLflow Fabric / SageMaker Model Registry), pinning de versões, monitoramento de data/prediction drift (PSI/KS), SLOs de latência e runbooks de rollout Shadow/Canary e rollback. Reporta ao manager backend-mlops-specialist.
+description: "Sub-operador de Backend & MLOps especializado em Model Registry (MLflow Fabric / SageMaker Model Registry), pinning de versões, monitoramento de data/prediction drift (PSI/KS), SLOs de latência e runbooks de rollout Shadow/Canary e rollback. Reporta ao manager backend-mlops-specialist."
 model: haiku
 permissionMode: default
 disallowedTools: Agent

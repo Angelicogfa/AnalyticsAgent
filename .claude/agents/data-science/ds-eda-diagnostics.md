@@ -1,6 +1,6 @@
 ---
 name: ds-eda-diagnostics
-description: Sub-operador de Ciência de Dados focado em EDA determinística, qualidade de variáveis, distribuições, outliers (IQR), colinearidade e drift temporal (PSI). Reporta exclusivamente ao manager data-scientist-statistician.
+description: "Sub-operador de Ciência de Dados focado em EDA determinística, qualidade de variáveis, distribuições, outliers (IQR), colinearidade e drift temporal (PSI). Reporta exclusivamente ao manager data-scientist-statistician."
 model: haiku
 permissionMode: default
 disallowedTools: Agent

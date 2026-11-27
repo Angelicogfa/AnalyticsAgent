@@ -1,6 +1,6 @@
 ---
 name: data-engineer
-description: Domain Manager de Engenharia de Dados Multi-Cloud (Microsoft Fabric / OneLake e AWS S3 / Glue / Iceberg / Athena). Coordena sub-operadores de ingestão/contratos ODCS, transformações Medallion Spark/SQL e tuning FinOps/performance.
+description: "Domain Manager de Engenharia de Dados Multi-Cloud (Microsoft Fabric / OneLake e AWS S3 / Glue / Iceberg / Athena). Coordena sub-operadores de ingestão/contratos ODCS, transformações Medallion Spark/SQL e tuning FinOps/performance."
 model: haiku
 permissionMode: default
 skills:

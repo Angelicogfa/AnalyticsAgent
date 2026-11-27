@@ -1,0 +1,89 @@
+apiVersion: v3.0.1
+kind: DataContract
+id: "<domain>-<data-product-slug>"
+version: "1.0.0"
+status: draft
+name: "<Nome do Produto de Dados>"
+domain: "<ex: commercial | finance | operations>"
+dataProduct: "<slug-do-produto>"
+tenant: "<organizacao-ou-unidade>"
+
+description:
+  purpose: "<Objetivo de negócio e consumidores atendidos por este produto de dados.>"
+  limitations: "<Limitações conhecidas, janelas de atraso ou exclusões.>"
+  usage: "<Como consumir via Microsoft Fabric OneLake / Direct Lake ou AWS Athena.>"
+
+tags:
+  - "spec:SPEC-NNN"
+  - "layer:gold"
+  - "multi-cloud"
+
+servers:
+  - server: aws-s3-iceberg
+    type: s3
+    format: iceberg
+    location: "s3://<bucket>/<domain>/<layer>/<table_name>/"
+    description: "Tabela aberta Apache Iceberg catalogada no AWS Glue Data Catalog."
+  - server: fabric-onelake
+    type: onelake
+    format: delta
+    location: "abfss://<workspace>@onelake.dfs.fabric.microsoft.com/<lakehouse>.Lakehouse/Tables/<table_name>"
+    description: "Exposta via OneLake Shortcut S3 (Cache ativo) ou Delta Lake com V-Order."
+
+schema:
+  - name: "<nome_tabela_logica>"
+    physicalName: "<nome_tabela_fisica>"
+    description: "<Descrição da entidade e grão único da tabela.>"
+    dataGranularityDescription: "1 linha por <chave_primaria> por <dt_ref>"
+    properties:
+      - name: entity_id
+        logicalType: string
+        physicalType: varchar
+        primaryKey: true
+        required: true
+        unique: true
+        classification: internal
+        description: "Identificador pseudonimizado da entidade (zero PII em texto plano)."
+      - name: dt_ref
+        logicalType: date
+        physicalType: date
+        required: true
+        partitioned: true
+        partitionKeyPosition: 1
+        classification: public
+        description: "Data de referência (chave obrigatória de partição FinOps)."
+      - name: metric_value
+        logicalType: number
+        physicalType: decimal(18,4)
+        required: true
+        classification: confidential
+        description: "Métrica principal reconciliada."
+    quality:
+      - type: library
+        metric: nullValues
+        column: entity_id
+        mustBe: 0
+      - type: library
+        metric: duplicateValues
+        column: entity_id
+        mustBe: 0
+      - type: text
+        description: "Nenhuma coluna contendo PII bruta (CPF, e-mail, telefone) pode existir nesta camada."
+
+slaProperties:
+  - property: freshness
+    value: "24"
+    unit: hours
+  - property: availability
+    value: "99.5"
+    unit: percent
+
+team:
+  - username: "<owner-role>"
+    role: "Data Product Owner"
+    description: "Responsável por evolução de contrato e comunicação de breaking changes."
+
+support:
+  - channel: "spec-repo"
+    url: "specs/active/SPEC-NNN.md"
+    description: "SPEC governada de origem."

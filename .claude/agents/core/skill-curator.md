@@ -1,6 +1,6 @@
 ---
 name: skill-curator
-description: Curador de Conhecimento Agêntico. Monitora tarefas repetitivas para extraí-las em SKILLs padronizadas (.agents/skills/) e gerencia a promoção e poda de RULES (.agents/rules/) sob o princípio Earned Rules Only.
+description: "Curador de Conhecimento Agêntico. Monitora tarefas repetitivas para extraí-las em SKILLs padronizadas (.agents/skills/) e gerencia a promoção e poda de RULES (.agents/rules/) sob o princípio Earned Rules Only."
 model: haiku
 permissionMode: default
 skills:

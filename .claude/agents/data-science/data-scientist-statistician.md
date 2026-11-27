@@ -1,6 +1,6 @@
 ---
 name: data-scientist-statistician
-description: Domain Manager de Ciência de Dados, Estatística Aplicada, Inferência Causal e Machine Learning. Coordena sub-operadores especializados (EDA/diagnósticos, modelagem estatística & análise de summary, feature engineering sem leakage e validação/calibração OOT).
+description: "Domain Manager de Ciência de Dados, Estatística Aplicada, Inferência Causal e Machine Learning. Coordena sub-operadores especializados (EDA/diagnósticos, modelagem estatística & análise de summary, feature engineering sem leakage e validação/calibração OOT)."
 model: sonnet
 permissionMode: default
 skills:

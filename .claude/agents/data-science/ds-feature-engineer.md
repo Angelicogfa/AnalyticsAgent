@@ -1,6 +1,6 @@
 ---
 name: ds-feature-engineer
-description: Sub-operador de Ciência de Dados especializado em engenharia e seleção de features sem data leakage (janelas de observação vs. performance, pipelines encapsulados e compatibilidade treino-serving). Reporta ao manager data-scientist-statistician.
+description: "Sub-operador de Ciência de Dados especializado em engenharia e seleção de features sem data leakage (janelas de observação vs. performance, pipelines encapsulados e compatibilidade treino-serving). Reporta ao manager data-scientist-statistician."
 model: sonnet
 permissionMode: default
 disallowedTools: Agent

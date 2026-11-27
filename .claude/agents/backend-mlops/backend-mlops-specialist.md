@@ -1,6 +1,6 @@
 ---
 name: backend-mlops-specialist
-description: Domain Manager de Backend para Dados/IA, Serving de Modelos e MLOps Multi-Cloud (Microsoft Fabric MLflow e AWS SageMaker/Lambda/ECS). Coordena sub-operadores de construção de APIs/Batch Serving e de Model Registry/Drift/Rollback.
+description: "Domain Manager de Backend para Dados/IA, Serving de Modelos e MLOps Multi-Cloud (Microsoft Fabric MLflow e AWS SageMaker/Lambda/ECS). Coordena sub-operadores de construção de APIs/Batch Serving e de Model Registry/Drift/Rollback."
 model: sonnet
 permissionMode: default
 skills:

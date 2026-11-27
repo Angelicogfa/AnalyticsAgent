@@ -1,6 +1,6 @@
 ---
 name: governance-auditor
-description: Guardião de Governança, Segurança, Compliance, FinOps e Metrificação. Audita planos e execuções contra RULES e policy.json, possui poder absoluto de VETO e analisa telemetria operacional.
+description: "Guardião de Governança, Segurança, Compliance, FinOps e Metrificação. Audita planos e execuções contra RULES e policy.json, possui poder absoluto de VETO e analisa telemetria operacional."
 model: opus
 permissionMode: plan
 skills:
